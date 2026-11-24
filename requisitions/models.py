@@ -12,7 +12,6 @@ from django.utils import timezone
 from inventory.models import InventoryItem
 
 
-
 class Requisition(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
@@ -423,6 +422,13 @@ class StockReservation(models.Model):
         validators=[MinValueValidator(Decimal("0"))],
     )
 
+    quantity_consumed = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+
     status = models.CharField(
         max_length=10,
         choices=Status.choices,
@@ -461,7 +467,18 @@ class StockReservation(models.Model):
                 condition=Q(quantity_reserved__lte=F("quantity_requested")),
                 name="stockreservation_reserved_lte_requested",
             ),
+            models.CheckConstraint(
+                condition=Q(
+                    quantity_consumed__gte=0,
+                    quantity_consumed__lte=F("quantity_reserved"),
+                ),
+                name="stockreservation_consumed_valid",
+            ),
         ]
+
+    @property
+    def remaining_reserved(self):
+        return self.quantity_reserved - self.quantity_consumed
 
     @property
     def shortage(self):

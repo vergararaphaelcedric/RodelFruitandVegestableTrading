@@ -18,7 +18,7 @@ def reserve_for_requisition(requisition, user=None):
     Reserve available inventory for every outstanding requisition line.
 
     Approval is allowed even when stock is insufficient.
-    Existing reservations are not duplicated.
+    Existing reservations are never duplicated or topped up.
     """
 
     with transaction.atomic():
@@ -89,6 +89,7 @@ def reserve_for_requisition(requisition, user=None):
                 inventory_item=item,
                 quantity_requested=outstanding,
                 quantity_reserved=reserved,
+                quantity_consumed=ZERO,
                 status=StockReservation.Status.ACTIVE,
                 reserved_by=user,
             )
@@ -122,7 +123,9 @@ def reserve_for_requisition(requisition, user=None):
 
 def release_for_requisition(requisition, user=None):
     """
-    Release all active stock reservations for a requisition.
+    Release only the remaining unconsumed stock reservations.
+
+    Previously consumed stock remains issued and is never released again.
     Released reservation records remain in the database.
     """
 
@@ -164,7 +167,12 @@ def release_for_requisition(requisition, user=None):
                     "An inventory item for a reservation was not found."
                 )
 
-            amount = reservation.quantity_reserved
+            amount = reservation.remaining_reserved
+
+            if amount < ZERO:
+                raise ValidationError(
+                    "Consumed reservation quantity is inconsistent."
+                )
 
             if amount > item.quantity_reserved:
                 raise ValidationError(
@@ -190,7 +198,7 @@ def release_for_requisition(requisition, user=None):
                     reserved_change=-amount,
                     reference=req.requisition_number,
                     remarks=(
-                        f"Stock reservation released for "
+                        f"Remaining stock reservation released for "
                         f"{req.requisition_number}."
                     ),
                     created_by=user,
@@ -211,7 +219,8 @@ def stock_check(requisition):
     Return a stock availability summary.
 
     Submitted requisitions receive a live preview.
-    Approved requisitions display their recorded reservations.
+    Approved requisitions display their remaining reservations.
+    Consumed stock is excluded from remaining reserved quantities.
     """
 
     req = requisition
@@ -243,15 +252,16 @@ def stock_check(requisition):
 
     for line in lines:
         item = fresh_items.get(line.inventory_item_id)
+        outstanding = line.quantity_outstanding
 
         if item is None:
             rows.append({
                 "line": line,
                 "item": None,
-                "requested": line.quantity_outstanding,
+                "requested": outstanding,
                 "available": None,
                 "reserved": ZERO,
-                "shortage": line.quantity_outstanding,
+                "shortage": outstanding,
                 "outcome": "not_inventory",
             })
             continue
@@ -260,7 +270,7 @@ def stock_check(requisition):
 
         if is_preview:
             available = item.quantity_available
-            requested = line.quantity_outstanding
+            requested = outstanding
             reserved = min(
                 requested,
                 max(available, ZERO),
@@ -268,23 +278,24 @@ def stock_check(requisition):
             shortage = requested - reserved
 
         elif reservation:
-            requested = reservation.quantity_requested
-            reserved = (
-                reservation.quantity_reserved
-                if reservation.status == StockReservation.Status.ACTIVE
-                else ZERO
-            )
-            shortage = requested - reserved
+            requested = outstanding
+
+            if reservation.status == StockReservation.Status.ACTIVE:
+                reserved = reservation.remaining_reserved
+            else:
+                reserved = ZERO
+
+            shortage = max(requested - reserved, ZERO)
             available = item.quantity_available
 
         else:
             rows.append({
                 "line": line,
                 "item": item,
-                "requested": line.quantity_outstanding,
+                "requested": outstanding,
                 "available": item.quantity_available,
                 "reserved": ZERO,
-                "shortage": line.quantity_outstanding,
+                "shortage": outstanding,
                 "outcome": "unchecked",
             })
             continue
@@ -356,7 +367,7 @@ def describe(check):
             name = (
                 row["item"].name
                 if row["item"]
-                else row["line"].description
+                else row["line"].item_description
             )
 
             shortage_lines.append(

@@ -21,9 +21,9 @@ DASHBOARD_URLS = {
 
 ROLE_SUMMARY = {
     "administrator": "Manage user accounts, roles and departments. Read-only access to inventory, requisitions, suppliers and quotations.",
-    "employee": "Create requisitions and track your own requests. View inventory items.",
+    "employee": "Create requisitions, track your own requests, and acknowledge received items. View inventory items.",
     "manager": "Review and approve or reject submitted requisitions. View inventory.",
-    "inventory_staff": "Maintain inventory items and categories, and record fulfilment of requisition lines.",
+    "inventory_staff": "Maintain inventory items and categories, manage assets, issue approved requisition items, and record fulfilment.",
     "purchasing_staff": "View requisitions and stock levels, manage Purchase Requests, suppliers and supplier quotations, and plan purchases.",
     "receiving_staff": "Verify issued purchase orders, record deliveries, report discrepancies, and track supplier resolutions.",
 }
@@ -40,6 +40,9 @@ ROLE_PERMISSIONS = {
         *perms("inventory", "inventoryitem", "view"),
         *perms("inventory", "itemcategory", "view"),
         *perms("inventory", "inventorytransaction", "view"),
+        *perms("inventory", "inventoryregistration", "view"),
+        *perms("inventory", "asset", "view"),
+        *perms("inventory", "itemassignment", "view"),
         *perms("requisitions", "requisition", "view"),
         *perms("requisitions", "requisitionitem", "view"),
         *perms("requisitions", "statushistory", "view"),
@@ -53,12 +56,16 @@ ROLE_PERMISSIONS = {
         *perms("procurement", "purchaseorder", "view"),
         *perms("procurement", "purchaseorderitem", "view"),
     ],
+
     "employee": [
         *perms("requisitions", "requisition", "add", "change", "view"),
         *perms("requisitions", "requisitionitem", "add", "change", "view"),
         *perms("inventory", "inventoryitem", "view"),
         *perms("inventory", "itemcategory", "view"),
+        *perms("inventory", "itemassignment", "view"),
+        "inventory.acknowledge_item_assignments",
     ],
+
     "manager": [
         *perms("requisitions", "requisition", "view"),
         "requisitions.approve_requisition",
@@ -70,15 +77,20 @@ ROLE_PERMISSIONS = {
         *perms("procurement", "budgetapproval", "view"),
         "procurement.approve_budget",
     ],
+
     "inventory_staff": [
         *perms("inventory", "inventoryitem", "add", "change", "view"),
         *perms("inventory", "itemcategory", "add", "change", "view"),
         *perms("inventory", "inventorytransaction", "view"),
         *perms("inventory", "inventoryregistration", "add", "view"),
+        *perms("inventory", "asset", "add", "change", "view"),
+        *perms("inventory", "itemassignment", "add", "view"),
+        "inventory.issue_items",
         *perms("requisitions", "requisition", "view"),
         *perms("requisitions", "requisitionitem", "change", "view"),
         *perms("requisitions", "stockreservation", "view"),
     ],
+
     "purchasing_staff": [
         *perms("inventory", "inventoryitem", "view"),
         *perms("inventory", "itemcategory", "view"),
@@ -94,16 +106,17 @@ ROLE_PERMISSIONS = {
         *perms("procurement", "purchaseorder", "add", "change", "view"),
         *perms("procurement", "purchaseorderitem", "view"),
     ],
+
     "receiving_staff": [
-    # Inventory reference access
+        # Inventory reference access
         *perms("inventory", "inventoryitem", "view"),
         *perms("inventory", "itemcategory", "view"),
 
-    # Delivery receiving
+        # Delivery receiving
         *perms("receiving", "deliveryreceipt", "add", "view"),
         *perms("receiving", "deliveryreceiptitem", "add", "view"),
 
-    # Discrepancy reporting and supplier resolution
+        # Discrepancy reporting and supplier resolution
         *perms("receiving", "deliverydiscrepancy", "add", "change", "view"),
     ],
 }

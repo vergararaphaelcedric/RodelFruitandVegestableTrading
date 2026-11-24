@@ -156,6 +156,7 @@ class InventoryTransaction(models.Model):
         RELEASE = "release", "Reservation Release"
         ADJUSTMENT = "adjustment", "Stock Adjustment"
         RECEIPT = "receipt", "Delivery Receipt"
+        ISSUE = "issue", "Item Issuance"
 
     inventory_item = models.ForeignKey(
         InventoryItem,
@@ -336,4 +337,249 @@ class InventoryRegistration(models.Model):
         return (
             f"{self.receipt_item.receipt.receipt_number} - "
             f"{self.inventory_item.name} - {self.quantity}"
+        )
+
+class Asset(models.Model):
+
+    class Status(models.TextChoices):
+        AVAILABLE = "available", "Available"
+        ASSIGNED = "assigned", "Assigned"
+        RETIRED = "retired", "Retired"
+
+    asset_tag = models.CharField(
+        max_length=50,
+        unique=True,
+    )
+
+    inventory_item = models.ForeignKey(
+        InventoryItem,
+        on_delete=models.PROTECT,
+        related_name="assets",
+    )
+
+    serial_number = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.AVAILABLE,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["asset_tag"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["serial_number"],
+                condition=~Q(serial_number=""),
+                name="asset_serial_number_unique",
+            ),
+        ]
+
+        permissions = [
+            ("manage_assets", "Can manage inventory assets"),
+        ]
+
+    def __str__(self):
+        return f"{self.asset_tag} - {self.inventory_item.name}"
+
+
+class ItemAssignment(models.Model):
+
+    class Status(models.TextChoices):
+        PENDING_ACKNOWLEDGEMENT = (
+            "pending_acknowledgement",
+            "Pending Acknowledgement",
+        )
+        ACKNOWLEDGED = "acknowledged", "Acknowledged"
+
+    requisition_item = models.ForeignKey(
+        "requisitions.RequisitionItem",
+        on_delete=models.PROTECT,
+        related_name="assignments",
+    )
+
+    inventory_item = models.ForeignKey(
+        InventoryItem,
+        on_delete=models.PROTECT,
+        related_name="assignments",
+    )
+
+    asset = models.OneToOneField(
+        Asset,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assignment",
+    )
+
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="received_item_assignments",
+    )
+
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="issued_item_assignments",
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+
+    status = models.CharField(
+        max_length=30,
+        choices=Status.choices,
+        default=Status.PENDING_ACKNOWLEDGEMENT,
+    )
+
+    issued_at = models.DateTimeField(auto_now_add=True)
+
+    acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    acknowledgement_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-issued_at", "-pk"]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(quantity__gt=0),
+                name="itemassignment_quantity_gt_0",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(asset__isnull=True)
+                    | Q(quantity=Decimal("1.00"))
+                ),
+                name="asset_assignment_quantity_one",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        status="pending_acknowledgement",
+                        acknowledged_at__isnull=True,
+                    )
+                    | Q(
+                        status="acknowledged",
+                        acknowledged_at__isnull=False,
+                    )
+                ),
+                name="itemassignment_acknowledgement_valid",
+            ),
+        ]
+
+        permissions = [
+            ("issue_items", "Can issue inventory items"),
+            (
+                "acknowledge_item_assignments",
+                "Can acknowledge received item assignments",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if self.asset_id:
+            if self.asset.inventory_item_id != self.inventory_item_id:
+                raise ValidationError({
+                    "asset": "The asset must belong to the selected inventory item."
+                })
+
+            if not self.inventory_item.is_durable_equipment:
+                raise ValidationError({
+                    "asset": "Only durable equipment can have an asset record."
+                })
+
+            if self.quantity != Decimal("1.00"):
+                raise ValidationError({
+                    "quantity": "An individual asset assignment must have a quantity of 1."
+                })
+
+        elif self.inventory_item.is_durable_equipment:
+            raise ValidationError({
+                "asset": "Durable equipment must have an individual asset record."
+            })
+
+        if self.requisition_item_id:
+            if (
+                self.requisition_item.inventory_item_id
+                and self.requisition_item.inventory_item_id
+                != self.inventory_item_id
+            ):
+                raise ValidationError({
+                    "inventory_item": (
+                        "The inventory item does not match the requisition item."
+                    )
+                })
+
+            if (
+                self.requisition_item.requisition.requested_by_id
+                != self.assigned_to_id
+            ):
+                raise ValidationError({
+                    "assigned_to": (
+                        "Items must be assigned to the employee who submitted the requisition."
+                    )
+                })
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            original = ItemAssignment.objects.get(pk=self.pk)
+
+            immutable_fields = [
+                "requisition_item_id",
+                "inventory_item_id",
+                "asset_id",
+                "assigned_to_id",
+                "issued_by_id",
+                "quantity",
+                "issued_at",
+            ]
+
+            for field in immutable_fields:
+                if getattr(original, field) != getattr(self, field):
+                    raise PermissionDenied(
+                        "Issued assignment details cannot be modified."
+                    )
+
+            valid_acknowledgement = (
+                original.status == self.Status.PENDING_ACKNOWLEDGEMENT
+                and self.status == self.Status.ACKNOWLEDGED
+                and self.acknowledged_at is not None
+            )
+
+            if not valid_acknowledgement and (
+                original.status != self.status
+                or original.acknowledged_at != self.acknowledged_at
+                or original.acknowledgement_note != self.acknowledgement_note
+            ):
+                raise PermissionDenied(
+                    "An item assignment can only be updated for acknowledgement."
+                )
+
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise PermissionDenied(
+            "Item assignment records cannot be deleted."
+        )
+
+    def __str__(self):
+        return (
+            f"{self.inventory_item.name} - "
+            f"{self.assigned_to} - {self.quantity}"
         )
