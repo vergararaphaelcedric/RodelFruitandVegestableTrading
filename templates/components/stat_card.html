@@ -1,0 +1,19 @@
+
+<div class="rs-panel rs-stat-card">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <p class="text-muted mb-1">{{ label }}</p>
+            <h3 class="mb-0">{{ value|default:"0" }}</h3>
+        </div>
+
+        {% if icon %}
+            <span class="rs-stat-icon">
+                <i class="bi {{ icon }}"></i>
+            </span>
+        {% endif %}
+    </div>
+
+    {% if description %}
+        <small class="text-muted d-block mt-3">{{ description }}</small>
+    {% endif %}
+</div>

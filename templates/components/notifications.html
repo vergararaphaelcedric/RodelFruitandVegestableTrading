@@ -1,0 +1,35 @@
+
+<div class="dropdown">
+    <button
+        class="btn btn-light position-relative"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        aria-label="Notifications"
+    >
+        <i class="bi bi-bell"></i>
+
+        {% if notification_count %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {{ notification_count }}
+            </span>
+        {% endif %}
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-end p-3 shadow" style="min-width: 280px;">
+        <h6 class="dropdown-header">Notifications</h6>
+
+        {% if notifications %}
+            {% for notification in notifications %}
+                <div class="border-bottom py-2">
+                    <strong>{{ notification.title }}</strong>
+                    <p class="small text-muted mb-0">
+                        {{ notification.message }}
+                    </p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="small text-muted mb-0">No new notifications.</p>
+        {% endif %}
+    </div>
+</div>

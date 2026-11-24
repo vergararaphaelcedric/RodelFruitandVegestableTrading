@@ -1,0 +1,85 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}Rhodel Fruit and Vegetable Trading{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tailwind.build.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+{% if user.is_authenticated %}
+
+    <div class="rs-app-shell">
+
+        {% include "components/sidebar.html" %}
+
+        <!-- Mobile Navigation -->
+        <div
+            class="offcanvas offcanvas-start"
+            tabindex="-1"
+            id="mobileSidebar"
+            aria-labelledby="mobileSidebarLabel"
+        >
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="mobileSidebarLabel">
+                    Navigation
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="offcanvas"
+                    aria-label="Close"
+                ></button>
+            </div>
+
+            <div class="offcanvas-body p-0">
+                {% include "components/sidebar.html" %}
+            </div>
+        </div>
+
+        <main class="rs-main">
+
+            {% include "components/topbar.html" %}
+
+            {% include "components/messages.html" %}
+
+            {% block content %}{% endblock %}
+
+            {% include "components/footer.html" %}
+
+        </main>
+
+    </div>
+
+{% else %}
+
+    <main class="container-fluid py-4">
+
+        {% include "components/messages.html" %}
+
+        {% block anonymous_content %}{% endblock %}
+
+    </main>
+
+{% endif %}
+
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/app.js' %}"></script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

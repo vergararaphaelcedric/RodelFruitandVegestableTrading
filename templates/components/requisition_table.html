@@ -1,0 +1,49 @@
+
+<div class="rs-panel mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h5 class="mb-1">Recent Requisitions</h5>
+            <p class="text-muted small mb-0">
+                Latest internal item requests
+            </p>
+        </div>
+        <i class="bi bi-clipboard-check text-primary fs-4"></i>
+    </div>
+
+    {% if requisitions %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Requisition No.</th>
+                        <th>Requested By</th>
+                        <th>Department</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for requisition in requisitions %}
+                        <tr>
+                            <td class="fw-semibold">
+                                {{ requisition.requisition_number }}
+                            </td>
+                            <td>{{ requisition.requested_by }}</td>
+                            <td>{{ requisition.department }}</td>
+                            <td>{{ requisition.request_date|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge text-bg-light">
+                                    {{ requisition.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted mb-0">
+            No requisition records are available.
+        </p>
+    {% endif %}
+</div>

@@ -1,0 +1,33 @@
+
+{% extends "base.html" %}
+
+{% block title %}Delete Supplier{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with page_title="Delete Supplier" page_description="Confirm whether you want to remove this supplier." %}
+
+<div class="rs-panel">
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        You are about to delete this supplier. If the supplier has existing quotations, the system will deactivate the supplier instead.
+    </div>
+
+    <p>
+        Are you sure you want to delete
+        <strong>{{ object.name }}</strong>
+        ({{ object.supplier_code }})?
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <button type="submit" class="btn btn-danger">
+            Confirm Delete
+        </button>
+
+        <a href="{% url 'procurement:supplier-list' %}" class="btn btn-outline-secondary">
+            Cancel
+        </a>
+    </form>
+</div>
+{% endblock %}

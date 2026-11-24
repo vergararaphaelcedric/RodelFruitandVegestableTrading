@@ -1,0 +1,25 @@
+
+<aside class="rs-sidebar">
+    <div class="rs-sidebar-brand">
+        <span class="rs-brand-icon">
+            <i class="bi bi-basket2-fill"></i>
+        </span>
+
+        <div>
+            <strong>Rhodel Fruit and Vegetable Trading</strong>
+            <small>Fruit and Vegetable Trading</small>
+        </div>
+    </div>
+
+    <nav class="rs-nav">
+        {% for section in nav_sections %}
+            <div class="rs-nav-section">
+                <div class="rs-nav-heading">{{ section.title }}</div>
+
+                {% for item in section.items %}
+                    {% include "components/nav_item.html" %}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </nav>
+</aside>

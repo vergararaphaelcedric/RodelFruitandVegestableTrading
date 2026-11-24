@@ -1,0 +1,300 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}New Requisition | Requisition System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .requisition-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .requisition-section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .item-row {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: #f9fafb;
+    }
+
+    .required-label::after {
+        content: " *";
+        color: #dc3545;
+    }
+
+    .form-label {
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">New Requisition</h1>
+            <p class="text-muted mb-0">
+                Request office supplies, equipment, and other necessary items.
+            </p>
+        </div>
+
+        <a href="{% url 'dashboard-employee' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <form method="post" id="requisition-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {% if item_formset.non_form_errors %}
+            <div class="alert alert-danger">
+                {{ item_formset.non_form_errors }}
+            </div>
+        {% endif %}
+
+        <!-- Requester Information -->
+        <div class="requisition-card shadow-sm p-4 mb-4">
+            <h2 class="requisition-section-title mb-3">
+                <i class="bi bi-person-circle me-2"></i>
+                Requester Information
+            </h2>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Employee Name</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{{ request.user.get_full_name|default:request.user.username }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Department</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{{ request.user.department|default:'No department assigned' }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Request Date</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{% now 'F d, Y' %}"
+                        readonly
+                    >
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Initial Status</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="Pending"
+                        readonly
+                    >
+                </div>
+            </div>
+        </div>
+
+        <!-- Request Purpose -->
+        <div class="requisition-card shadow-sm p-4 mb-4">
+            <h2 class="requisition-section-title mb-3">
+                <i class="bi bi-chat-left-text me-2"></i>
+                Request Purpose
+            </h2>
+
+            <label for="{{ form.purpose.id_for_label }}" class="form-label required-label">
+                Reason for Request
+            </label>
+
+            {{ form.purpose }}
+
+            {% for error in form.purpose.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Requested Items -->
+        <div class="requisition-card shadow-sm p-4 mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                    <h2 class="requisition-section-title mb-1">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Requested Items
+                    </h2>
+                    <p class="text-muted small mb-0">
+                        Add the items you need. You can request multiple items.
+                    </p>
+                </div>
+
+                <button type="button" class="btn btn-outline-primary btn-sm" id="add-item">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    Add Another Item
+                </button>
+            </div>
+
+            {{ item_formset.management_form }}
+
+            <div id="item-form-list">
+                {% for item_form in item_formset %}
+                    <div class="item-row">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="h6 fw-semibold mb-0">
+                                Item <span class="item-number">{{ forloop.counter }}</span>
+                            </h3>
+
+                            {% if item_formset.can_delete %}
+                                <div class="form-check">
+                                    {{ item_form.DELETE }}
+                                    <label class="form-check-label small">
+                                        Remove
+                                    </label>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% for hidden in item_form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+
+                        {% if item_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ item_form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Select Existing Inventory Item
+                                </label>
+                                {{ item_form.inventory_item }}
+                                {% for error in item_form.inventory_item.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                                <div class="form-text">
+                                    Choose an existing item or leave this blank for a custom request.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label required-label">
+                                    Item Name
+                                </label>
+                                {{ item_form.item_description }}
+                                {% for error in item_form.item_description.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label required-label">
+                                    Unit of Measurement
+                                </label>
+                                {{ item_form.unit_of_measure }}
+                                {% for error in item_form.unit_of_measure.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label required-label">
+                                    Quantity
+                                </label>
+                                {{ item_form.quantity_requested }}
+                                {% for error in item_form.quantity_requested.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <template id="empty-form-template">
+                <div class="item-row">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h6 fw-semibold mb-0">
+                            Item <span class="item-number"></span>
+                        </h3>
+
+                        <div class="form-check">
+                            {{ item_formset.empty_form.DELETE }}
+                            <label class="form-check-label small">Remove</label>
+                        </div>
+                    </div>
+
+                    {% for hidden in item_formset.empty_form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Select Existing Inventory Item</label>
+                            {{ item_formset.empty_form.inventory_item }}
+                            <div class="form-text">
+                                Choose an existing item or leave blank for a custom request.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label required-label">Item Name</label>
+                            {{ item_formset.empty_form.item_description }}
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label required-label">Unit of Measurement</label>
+                            {{ item_formset.empty_form.unit_of_measure }}
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label required-label">Quantity</label>
+                            {{ item_formset.empty_form.quantity_requested }}
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex flex-wrap justify-content-end gap-2 mb-4">
+            <a href="{% url 'dashboard-employee' %}" class="btn btn-light border">
+                Cancel
+            </a>
+
+            <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-send me-1"></i>
+                Submit Requisition
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/requisition_form.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,223 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <a href="{% url 'inventory-registration-queue' %}"
+           class="btn btn-outline-secondary btn-sm mb-3">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Pending Registrations
+        </a>
+
+        <h2 class="fw-bold mb-1">Register Accepted Item</h2>
+        <p class="text-muted mb-0">
+            Assign the accepted delivery quantity to an inventory record.
+        </p>
+    </div>
+
+    <div class="rs-panel mb-4">
+        <h5 class="fw-semibold mb-3">Delivery Information</h5>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <small class="text-muted d-block">Delivery Receipt</small>
+                <strong>{{ receipt_item.receipt.receipt_number }}</strong>
+            </div>
+
+            <div class="col-md-4">
+                <small class="text-muted d-block">Purchase Order</small>
+                <strong>{{ receipt_item.receipt.purchase_order.po_number }}</strong>
+            </div>
+
+            <div class="col-md-4">
+                <small class="text-muted d-block">Accepted Quantity</small>
+                <strong class="text-success">
+                    {{ receipt_item.accepted_quantity }}
+                </strong>
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted d-block">Purchase Order Item</small>
+                <strong>{{ receipt_item.purchase_order_item }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="rs-panel">
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <h5 class="fw-semibold mb-3">Inventory Assignment</h5>
+
+            <div class="mb-3">
+                <label class="form-label"
+                       for="{{ form.inventory_item.id_for_label }}">
+                    Existing Inventory Item
+                </label>
+
+                {{ form.inventory_item }}
+
+                {% for error in form.inventory_item.errors %}
+                <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+
+                <div class="form-text">
+                    Select an existing item if the accepted delivery
+                    belongs to an inventory record already in the system.
+                </div>
+            </div>
+
+            <div class="form-check mb-4">
+                {{ form.create_new_item }}
+
+                <label class="form-check-label"
+                       for="{{ form.create_new_item.id_for_label }}">
+                    Create a new inventory item instead
+                </label>
+
+                {% for error in form.create_new_item.errors %}
+                <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div id="new-item-fields" class="border rounded p-3 mb-4">
+                <h6 class="fw-semibold mb-3">
+                    New Inventory Item Details
+                </h6>
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.name.id_for_label }}">
+                            {{ form.name.label }}
+                        </label>
+                        {{ form.name }}
+                        {% for error in form.name.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.item_code.id_for_label }}">
+                            {{ form.item_code.label }}
+                        </label>
+                        {{ form.item_code }}
+                        {% for error in form.item_code.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.category.id_for_label }}">
+                            {{ form.category.label }}
+                        </label>
+                        {{ form.category }}
+                        {% for error in form.category.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label"
+                               for="{{ form.unit_of_measure.id_for_label }}">
+                            {{ form.unit_of_measure.label }}
+                        </label>
+                        {{ form.unit_of_measure }}
+                        {% for error in form.unit_of_measure.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label"
+                               for="{{ form.reorder_level.id_for_label }}">
+                            {{ form.reorder_level.label }}
+                        </label>
+                        {{ form.reorder_level }}
+                        {% for error in form.reorder_level.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label"
+                               for="{{ form.description.id_for_label }}">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% for error in form.description.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            {{ form.is_durable_equipment }}
+                            <label class="form-check-label"
+                                   for="{{ form.is_durable_equipment.id_for_label }}">
+                                {{ form.is_durable_equipment.label }}
+                            </label>
+                        </div>
+                        {% for error in form.is_durable_equipment.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                Only the accepted quantity will be added to inventory.
+                Damaged and incorrect quantities will not be registered.
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'inventory-registration-queue' %}"
+                   class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Complete Registration
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const checkbox = document.getElementById(
+        "{{ form.create_new_item.id_for_label }}"
+    );
+
+    const existingItem = document.getElementById(
+        "{{ form.inventory_item.id_for_label }}"
+    );
+
+    const newItemFields = document.getElementById("new-item-fields");
+
+    function updateRegistrationFields() {
+        const creatingNew = checkbox.checked;
+
+        newItemFields.style.display = creatingNew ? "block" : "none";
+        existingItem.disabled = creatingNew;
+    }
+
+    checkbox.addEventListener("change", updateRegistrationFields);
+
+    updateRegistrationFields();
+});
+</script>
+{% endblock %}

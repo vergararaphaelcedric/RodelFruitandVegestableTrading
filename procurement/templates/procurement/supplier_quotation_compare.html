@@ -1,0 +1,132 @@
+
+{% extends "base.html" %}
+
+{% block title %}Compare Supplier Quotations{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with page_title="Compare Supplier Quotations" page_description="Compare supplier prices for a purchase request item." %}
+
+<div class="rs-panel mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="mb-1">Purchase Request Item</h5>
+            <p class="text-muted mb-1">
+                <strong>Purchase Request:</strong>
+                {{ purchase_request_item.purchase_request.request_number }}
+            </p>
+            <p class="text-muted mb-1">
+                <strong>Item:</strong>
+                {{ purchase_request_item.item_description }}
+            </p>
+            <p class="text-muted mb-0">
+                <strong>Shortage Quantity:</strong>
+                {{ purchase_request_item.quantity_shortage }}
+                {{ purchase_request_item.unit_of_measure }}
+            </p>
+        </div>
+
+        <a href="{% url 'procurement:quotation-list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Quotations
+        </a>
+    </div>
+</div>
+
+<div class="rs-panel">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+        <div>
+            <h5 class="mb-1">Quotation Comparison</h5>
+            <p class="text-muted mb-0">
+                Quotations are arranged from lowest to highest unit price.
+            </p>
+        </div>
+
+        <span class="badge bg-primary">
+            {{ quotation_count }} Quotation{{ quotation_count|pluralize }}
+        </span>
+    </div>
+
+    {% if quotations %}
+        {% if best_quotation %}
+            <div class="alert alert-success mb-4">
+                <strong>Lowest Unit Price:</strong>
+                {{ best_quotation.supplier.name }}
+                —
+                {{ best_quotation.unit_price|floatformat:2 }}
+                per {{ purchase_request_item.unit_of_measure }}
+            </div>
+        {% endif %}
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Rank</th>
+                        <th>Quotation No.</th>
+                        <th>Supplier</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total Price</th>
+                        <th>Quotation Date</th>
+                        <th>Valid Until</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for quotation in quotations %}
+                        <tr>
+                            <td>
+                                {% if forloop.first %}
+                                    <span class="badge bg-success">Lowest</span>
+                                {% else %}
+                                    {{ forloop.counter }}
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <strong>{{ quotation.quotation_number }}</strong>
+                            </td>
+
+                            <td>{{ quotation.supplier.name }}</td>
+
+                            <td>{{ quotation.quantity }}</td>
+
+                            <td>
+                                {{ quotation.unit_price|floatformat:2 }}
+                            </td>
+
+                            <td>
+                                <strong>{{ quotation.total_price|floatformat:2 }}</strong>
+                            </td>
+
+                            <td>
+                                {{ quotation.quotation_date|date:"M d, Y" }}
+                            </td>
+
+                            <td>
+                                {{ quotation.valid_until|date:"M d, Y" }}
+                            </td>
+
+                            <td>
+                                {% if quotation.is_expired %}
+                                    <span class="badge bg-danger">Expired</span>
+                                {% else %}
+                                    <span class="badge bg-success">Valid</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-text fs-1 text-muted"></i>
+            <h5 class="mt-3">No quotations available</h5>
+            <p class="text-muted">
+                No supplier quotations have been recorded for this item yet.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

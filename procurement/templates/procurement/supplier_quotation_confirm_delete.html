@@ -1,0 +1,36 @@
+
+{% extends "base.html" %}
+
+{% block title %}Delete Quotation{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with page_title="Delete Supplier Quotation" page_description="Confirm the removal of this quotation record." %}
+
+<div class="rs-panel">
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        This action permanently deletes the selected quotation record.
+    </div>
+
+    <p>Are you sure you want to delete this quotation?</p>
+
+    <ul>
+        <li><strong>Quotation Number:</strong> {{ object.quotation_number }}</li>
+        <li><strong>Supplier:</strong> {{ object.supplier.name }}</li>
+        <li><strong>Unit Price:</strong> {{ object.unit_price|floatformat:2 }}</li>
+        <li><strong>Total Price:</strong> {{ object.total_price|floatformat:2 }}</li>
+    </ul>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <button type="submit" class="btn btn-danger">
+            Confirm Delete
+        </button>
+
+        <a href="{% url 'procurement:quotation-list' %}" class="btn btn-outline-secondary">
+            Cancel
+        </a>
+    </form>
+</div>
+{% endblock %}

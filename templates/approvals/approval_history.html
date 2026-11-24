@@ -1,0 +1,205 @@
+
+{% extends "base.html" %}
+
+{% block title %}Approval History | Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h3 class="mb-1">{{ page_title }}</h3>
+            <p class="text-muted mb-0">{{ page_description }}</p>
+        </div>
+
+        <a href="{% url 'dashboard-manager' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <div class="rs-panel mb-4">
+        <h5 class="mb-3">
+            <i class="bi bi-funnel me-2"></i>Filter Approval Records
+        </h5>
+
+        <form method="get">
+            <div class="row g-3 align-items-end">
+
+                <div class="col-md-4">
+                    <label class="form-label">{{ filter_form.q.label }}</label>
+                    {{ filter_form.q }}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">{{ filter_form.status.label }}</label>
+                    {{ filter_form.status }}
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">From</label>
+                    {{ filter_form.date_from }}
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">To</label>
+                    {{ filter_form.date_to }}
+                </div>
+
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ filter_form.mine }}
+                        <label class="form-check-label" for="{{ filter_form.mine.id_for_label }}">
+                            {{ filter_form.mine.label }}
+                        </label>
+                    </div>
+                </div>
+
+                {% if filter_form.errors %}
+                <div class="col-12">
+                    <div class="alert alert-danger mb-0">
+                        Please check your filter values.
+                        {{ filter_form.errors }}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </form>
+
+        {% if filters_active %}
+        <div class="mt-3">
+            <a href="{{ request.path }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="rs-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="bi bi-clock-history me-2"></i>Decision Records
+            </h5>
+            <span class="text-muted small">
+                {{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }}
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Request Number</th>
+                        <th>Requester</th>
+                        <th>Decision</th>
+                        <th>Approver</th>
+                        <th>Remarks</th>
+                        <th>Date and Time</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>
+                            <strong>{{ record.requisition.requisition_number }}</strong>
+                        </td>
+
+                        <td>
+                            {{ record.requisition.requested_by.get_full_name|default:record.requisition.requested_by.username }}
+                        </td>
+
+                        <td>
+                            {% if record.decision == "approved" %}
+                                <span class="badge bg-success">Approved</span>
+                            {% else %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ record.approver.get_full_name|default:record.approver.username }}
+                        </td>
+
+                        <td>
+                            {% if record.remarks %}
+                                {{ record.remarks|truncatechars:70 }}
+                            {% else %}
+                                <span class="text-muted">No remarks</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ record.acted_at|date:"M d, Y h:i A" }}
+                        </td>
+
+                        <td class="text-end">
+                            <a href="{% url 'manager-review' record.requisition.pk %}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-clock-history fs-1 text-muted"></i>
+                            <p class="text-muted mt-2 mb-0">{{ empty_message }}</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <nav aria-label="Approval history pagination" class="mt-3">
+            <ul class="pagination justify-content-end mb-0">
+
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                        Previous
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">
+                        Next
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                </li>
+                {% endif %}
+
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"Account Form" }}{% endblock %}
+
+{% block content %}
+
+{% include "components/page_header.html" with page_title=page_title|default:"Account Form" page_description="Enter the account information below." %}
+
+<div class="rs-panel" style="max-width: 850px; margin: 0 auto;">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="rs-stat-icon">
+            <i class="bi bi-person-gear"></i>
+        </span>
+
+        <div>
+            <h5 class="mb-1">
+                {{ page_title|default:"Account Form" }}
+            </h5>
+
+            {% if target_user %}
+                <small class="text-muted">
+                    Editing account: {{ target_user.username }}
+                </small>
+            {% else %}
+                <small class="text-muted">
+                    Create a new system user account.
+                </small>
+            {% endif %}
+        </div>
+    </div>
+
+    <hr>
+
+    <form method="post" class="rs-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                <strong>Please correct the following errors:</strong>
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="rs-form-fields">
+            {{ form.as_p }}
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle me-2"></i>
+                {{ submit_label|default:"Save" }}
+            </button>
+
+            <a
+                href="{{ cancel_url|default:'/' }}"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-x-circle me-2"></i>
+                Cancel
+            </a>
+        </div>
+    </form>
+
+</div>
+
+{% endblock %}

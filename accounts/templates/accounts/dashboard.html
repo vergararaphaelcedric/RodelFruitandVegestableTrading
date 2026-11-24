@@ -1,0 +1,204 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ role_label }} Dashboard{% endblock %}
+
+{% block content %}
+
+{% include "components/page_header.html" with page_title="Dashboard" page_description="Welcome to your internal procurement workspace." %}
+
+<!-- Welcome Section -->
+<div class="rs-panel mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <div class="rs-stat-icon">
+            <i class="bi bi-person-check"></i>
+        </div>
+
+        <div>
+            <p class="text-muted mb-1">ROLE DASHBOARD</p>
+            <h2 class="mb-1">
+                Welcome, {{ user.first_name|default:user.username }}!
+            </h2>
+            <p class="text-muted mb-0">
+                You are signed in as <strong>{{ role_label }}</strong>.
+            </p>
+        </div>
+    </div>
+
+    {% if role_summary %}
+        <hr>
+        <p class="mb-0">{{ role_summary }}</p>
+    {% endif %}
+</div>
+
+<!-- Dashboard Statistics -->
+<div class="row g-3 mb-4">
+    {% for stat in dashboard_stats %}
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="rs-panel h-100">
+                <p class="text-muted mb-2">{{ stat.label }}</p>
+                <h3 class="fw-bold mb-0">{{ stat.value }}</h3>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="rs-panel">
+                <p class="text-muted mb-0">
+                    No dashboard statistics are currently available.
+                </p>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Recent Requisitions -->
+{% if recent_requisitions %}
+    <div class="rs-panel mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-clipboard-check text-primary fs-4"></i>
+                <h5 class="mb-0">Recent Requisitions</h5>
+            </div>
+            <span class="badge text-bg-light">Latest 5</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Requisition No.</th>
+                        <th>Requested By</th>
+                        <th>Department</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for requisition in recent_requisitions %}
+                        <tr>
+                            <td class="fw-semibold">
+                                {{ requisition.requisition_number }}
+                            </td>
+                            <td>{{ requisition.requested_by }}</td>
+                            <td>{{ requisition.department }}</td>
+                            <td>{{ requisition.request_date|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge rounded-pill text-bg-light">
+                                    {{ requisition.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Low Stock Items -->
+{% if low_stock_items %}
+    <div class="rs-panel mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
+            <h5 class="mb-0">Low Stock Items</h5>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Item Code</th>
+                        <th>Item Name</th>
+                        <th>Quantity Available</th>
+                        <th>Reorder Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in low_stock_items %}
+                        <tr>
+                            <td>{{ item.item_code }}</td>
+                            <td class="fw-semibold">{{ item.name }}</td>
+                            <td>{{ item.quantity_on_hand }} {{ item.unit_of_measure }}</td>
+                            <td>{{ item.reorder_level }} {{ item.unit_of_measure }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Account Information -->
+<div class="rs-panel mb-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-person-vcard text-primary fs-4"></i>
+        <h5 class="mb-0">Account Information</h5>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <tbody>
+                <tr>
+                    <th scope="row" style="width: 180px;">Username</th>
+                    <td>{{ user.username }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Full Name</th>
+                    <td>{{ user.get_full_name|default:"Not provided" }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Email</th>
+                    <td>{{ user.email|default:"Not provided" }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Department</th>
+                    <td>{{ user.department|default:"Not assigned" }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Employee ID</th>
+                    <td>{{ user.employee_id|default:"Not assigned" }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- User Management -->
+{% if can_manage_users %}
+    <div class="rs-panel mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-people text-primary fs-4"></i>
+            <h5 class="mb-0">User Management</h5>
+        </div>
+
+        <p class="text-muted">
+            Create, view, and manage employee accounts according
+            to your assigned permissions.
+        </p>
+
+        <a href="{% url 'user-list' %}" class="btn btn-primary">
+            <i class="bi bi-people me-2"></i>
+            Manage Users
+        </a>
+    </div>
+{% endif %}
+
+<!-- System Access -->
+<div class="rs-panel">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-shield-lock text-primary fs-4"></i>
+        <h5 class="mb-0">System Access</h5>
+    </div>
+
+    <p class="text-muted">
+        Your available system features depend on your assigned
+        role and permissions.
+    </p>
+
+    <a href="{% url 'password-change' %}" class="btn btn-outline-primary">
+        <i class="bi bi-key me-2"></i>
+        Change My Password
+    </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,65 @@
+
+{% extends "base.html" %}
+
+{% block title %}Login | Requisition System{% endblock %}
+
+{% block anonymous_content %}
+
+<div class="container py-5">
+    <div class="rs-panel mx-auto" style="max-width: 460px; padding: 32px;">
+
+        <div class="text-center mb-4">
+            <div class="rs-stat-icon mx-auto mb-3">
+                <i class="bi bi-box-seam"></i>
+            </div>
+
+            <h2 class="fw-bold mb-2">Welcome Back</h2>
+
+            <p class="text-muted mb-0">
+                Sign in to access your account.
+            </p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <input type="hidden" name="next" value="{{ next }}">
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% for field in form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary w-100 mt-3">
+                <i class="bi bi-box-arrow-in-right me-2"></i>
+                Sign In
+            </button>
+        </form>
+
+        <hr class="my-4">
+
+        <p class="text-muted text-center small mb-0">
+            Internal Procurement Management System
+        </p>
+
+    </div>
+</div>
+
+{% endblock %}

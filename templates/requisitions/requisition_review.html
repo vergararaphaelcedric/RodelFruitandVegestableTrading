@@ -1,0 +1,139 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Review Requisition</h2>
+            <p class="text-muted mb-0">
+                Review the request details before making a decision.
+            </p>
+        </div>
+
+        <a href="{% url 'pending-requisitions' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Pending Requests
+        </a>
+    </div>
+
+    <div class="rs-panel mb-4">
+        <h5 class="mb-3">Requisition Information</h5>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <small class="text-muted">Requisition Number</small>
+                <p class="fw-semibold">{{ requisition.requisition_number }}</p>
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted">Status</small>
+                <p>
+                    <span class="badge bg-warning text-dark">
+                        {{ requisition.get_status_display }}
+                    </span>
+                </p>
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted">Requested By</small>
+                <p class="fw-semibold">
+                    {{ requisition.requested_by.get_full_name|default:requisition.requested_by.username }}
+                </p>
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted">Department</small>
+                <p class="fw-semibold">{{ requisition.department.name }}</p>
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted">Request Date</small>
+                <p>{{ requisition.request_date|date:"F d, Y" }}</p>
+            </div>
+
+            <div class="col-12">
+                <small class="text-muted">Purpose</small>
+                <p>{{ requisition.purpose|linebreaksbr }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="rs-panel mb-4">
+        <h5 class="mb-3">Requested Items</h5>
+
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item Description</th>
+                        <th>Unit</th>
+                        <th>Quantity Requested</th>
+                        <th>Quantity Fulfilled</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in requisition.items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.item_description }}</td>
+                        <td>{{ item.get_unit_of_measure_display }}</td>
+                        <td>{{ item.quantity_requested }}</td>
+                        <td>{{ item.quantity_fulfilled }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            No items found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="rs-panel">
+        <h5 class="mb-3">Manager Decision</h5>
+
+ 
+<form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+        <label class="form-label">Remarks</label>
+        {{ form.remarks }}
+
+        {% for error in form.remarks.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+        {% endfor %}
+
+        <small class="text-muted">
+            Remarks are required when rejecting a requisition.
+        </small>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button
+            type="submit"
+            name="decision"
+            value="approved"
+            class="btn btn-success"
+        >
+            <i class="bi bi-check-circle me-2"></i>Approve
+        </button>
+
+        <button
+            type="submit"
+            name="decision"
+            value="rejected"
+            class="btn btn-danger"
+        >
+            <i class="bi bi-x-circle me-2"></i>Reject
+        </button>
+    </div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,24 @@
+
+<header class="rs-topbar">
+    <div class="d-flex align-items-center gap-3">
+        <button
+            class="btn btn-light d-lg-none"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#mobileSidebar"
+            aria-label="Open navigation"
+        >
+            <i class="bi bi-list"></i>
+        </button>
+
+        <div>
+            <h5 class="mb-0">Rhodel Fruit and Vegetable Trading</h5>
+            <small class="text-muted">Internal Requisition and Procurement Management</small>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        {% include "components/notifications.html" %}
+        {% include "components/profile_dropdown.html" %}
+    </div>
+</header>

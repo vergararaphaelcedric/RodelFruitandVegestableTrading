@@ -1,0 +1,290 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h3 class="mb-1">{{ page_title }}</h3>
+            <p class="text-muted mb-0">
+                Review the requested items, stock availability, and approval history.
+            </p>
+        </div>
+
+        <a href="{% url 'manager-pending' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Pending
+        </a>
+    </div>
+
+    <!-- Requisition Information -->
+    <div class="rs-panel mb-4">
+        <h5 class="mb-3">
+            <i class="bi bi-file-earmark-text me-2"></i>Requisition Information
+        </h5>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <small class="text-muted">Request Number</small>
+                <div class="fw-semibold">{{ requisition.requisition_number }}</div>
+            </div>
+
+            <div class="col-md-4">
+                <small class="text-muted">Requester</small>
+                <div class="fw-semibold">
+                    {{ requisition.requested_by.get_full_name|default:requisition.requested_by.username }}
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <small class="text-muted">Department</small>
+                <div class="fw-semibold">{{ requisition.department.name }}</div>
+            </div>
+
+            <div class="col-md-4">
+                <small class="text-muted">Request Date</small>
+                <div class="fw-semibold">{{ requisition.request_date|date:"M d, Y" }}</div>
+            </div>
+
+            <div class="col-md-4">
+                <small class="text-muted">Current Status</small>
+                <div>
+                    <span class="badge bg-warning text-dark">
+                        {{ requisition.get_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <h6>Purpose / Reason</h6>
+        <p class="mb-0">{{ requisition.purpose|linebreaksbr }}</p>
+    </div>
+
+    <!-- Requested Items -->
+    <div class="rs-panel mb-4">
+        <h5 class="mb-3">
+            <i class="bi bi-box-seam me-2"></i>Requested Items and Stock Availability
+        </h5>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Unit</th>
+                        <th>Requested</th>
+                        <th>Fulfilled</th>
+                        <th>Available Stock</th>
+                        <th>
+    {% if requisition.status == "submitted" %}
+        Estimated Reservation
+    {% else %}
+        Reserved for Request
+    {% endif %}
+</th>
+                        <th>Shortage</th>
+                        <th>Stock Assessment</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td>
+                            <strong>{{ row.line.item_description }}</strong>
+                            {% if row.line.is_custom_item %}
+                                <div class="small text-muted">Custom item</div>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ row.line.get_unit_of_measure_display }}</td>
+
+                        <td>{{ row.line.quantity_requested }}</td>
+
+                        <td>{{ row.line.quantity_fulfilled }}</td>
+
+                        <td>
+                          {% if row.stock is not None %}
+                           {{ row.stock }}
+                            {% else %}
+                              <span class="text-muted">Not in inventory</span>
+                            {% endif %}
+                             </td>
+
+                             <td>{{ row.reserved }}</td>
+
+                        <td>
+                             {% if row.shortage > 0 %}
+                             <span class="text-danger fw-semibold">{{ row.shortage }}</span>
+                           {% else %}
+                          <span class="text-success">0</span>
+                           {% endif %}
+                            </td>
+
+<td>
+    {% if row.outcome == "not_inventory" %}
+        <span class="badge bg-secondary">Needs sourcing</span>
+    {% elif row.outcome == "sufficient" %}
+        <span class="badge bg-success">Sufficient</span>
+    {% elif row.outcome == "partial" %}
+        <span class="badge bg-warning text-dark">Partially available</span>
+    {% elif row.outcome == "none" %}
+        <span class="badge bg-danger">No stock</span>
+    {% else %}
+        <span class="badge bg-secondary">Unchecked</span>
+    {% endif %}
+</td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No requested items found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-info mb-0">
+    <i class="bi bi-info-circle me-2"></i>
+    Approving this requisition automatically reserves available inventory.
+    Any remaining shortage must be addressed through purchasing.
+    Reserved quantities are held for this requisition and are not yet deducted
+    from physical stock.
+</div>
+    </div>
+
+    <!-- Approval Decision -->
+    {% if requisition.status == "submitted" %}
+    <div class="rs-panel mb-4">
+        <h5 class="mb-3">
+            <i class="bi bi-clipboard-check me-2"></i>Manager Decision
+        </h5>
+
+        <form method="post">
+            {% csrf_token %}
+
+
+            <div class="mb-3">
+                <label for="{{ form.remarks.id_for_label }}" class="form-label">
+                    {{ form.remarks.label }}
+                </label>
+
+                {{ form.remarks }}
+
+                {% if form.remarks.help_text %}
+                    <div class="form-text">{{ form.remarks.help_text }}</div>
+                {% endif %}
+
+                {% for error in form.remarks.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            {% for error in form.decision.errors %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endfor %}
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit"
+                        name="decision"
+                        value="approved"
+                        class="btn btn-success">
+                    <i class="bi bi-check-circle me-2"></i>Approve Requisition
+                </button>
+
+                <button type="submit"
+                        name="decision"
+                        value="rejected"
+                        class="btn btn-danger">
+                    <i class="bi bi-x-circle me-2"></i>Reject Requisition
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Status History -->
+    <div class="rs-panel mb-4">
+        <h5 class="mb-3">
+            <i class="bi bi-clock-history me-2"></i>Status History
+        </h5>
+
+        {% for entry in history %}
+        <div class="border-bottom py-3">
+            <div class="d-flex justify-content-between flex-wrap gap-2">
+                <strong>
+                    {{ entry.get_previous_status_display|default:"Created" }}
+                    &rarr;
+                    {{ entry.get_new_status_display }}
+                </strong>
+
+                <small class="text-muted">
+                    {{ entry.changed_at|date:"M d, Y h:i A" }}
+                </small>
+            </div>
+
+            <div class="small text-muted">
+                Changed by:
+                {% if entry.changed_by %}
+                    {{ entry.changed_by.get_full_name|default:entry.changed_by.username }}
+                {% else %}
+                    System
+                {% endif %}
+            </div>
+
+            {% if entry.remarks %}
+                <p class="mb-0 mt-1">{{ entry.remarks }}</p>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted mb-0">No status history available.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Approval History -->
+    <div class="rs-panel">
+        <h5 class="mb-3">
+            <i class="bi bi-person-check me-2"></i>Approval History
+        </h5>
+
+        {% for approval in approvals %}
+        <div class="border-bottom py-3">
+            <div class="d-flex justify-content-between flex-wrap gap-2">
+                <div>
+                    {% if approval.decision == "approved" %}
+                        <span class="badge bg-success">Approved</span>
+                    {% else %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% endif %}
+
+                    <strong class="ms-2">
+                        {{ approval.approver.get_full_name|default:approval.approver.username }}
+                    </strong>
+                </div>
+
+                <small class="text-muted">
+                    {{ approval.acted_at|date:"M d, Y h:i A" }}
+                </small>
+            </div>
+
+            {% if approval.remarks %}
+                <p class="mt-2 mb-0">{{ approval.remarks }}</p>
+            {% else %}
+                <p class="text-muted mt-2 mb-0">No remarks recorded.</p>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted mb-0">No approval decisions recorded yet.</p>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

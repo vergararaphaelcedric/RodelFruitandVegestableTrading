@@ -1,0 +1,117 @@
+
+{% extends "base.html" %}
+
+{% block title %}Supplier Quotations{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with page_title="Supplier Quotations" page_description="Review supplier quotations for outstanding purchase requests." %}
+
+<div class="rs-panel mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="mb-1">Quotation Records</h5>
+            <p class="text-muted mb-0">
+                Review and compare supplier prices and quotation validity.
+            </p>
+        </div>
+
+        {% if perms.procurement.add_supplierquotation %}
+            <a href="{% url 'procurement:quotation-create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Add Quotation
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="rs-panel">
+    {% if quotations %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Quotation No.</th>
+                        <th>Supplier</th>
+                        <th>Purchase Request</th>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total Price</th>
+                        <th>Quotation Date</th>
+                        <th>Valid Until</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for quotation in quotations %}
+                        <tr>
+                            <td>
+                                <strong>{{ quotation.quotation_number }}</strong>
+                            </td>
+
+                            <td>{{ quotation.supplier.name }}</td>
+
+                            <td>
+                                {{ quotation.purchase_request_item.purchase_request.request_number }}
+                            </td>
+
+                            <td>
+                                {{ quotation.purchase_request_item.item_description }}
+                            </td>
+
+                            <td>{{ quotation.quantity }}</td>
+
+                            <td>{{ quotation.unit_price|floatformat:2 }}</td>
+
+                            <td>
+                                <strong>{{ quotation.total_price|floatformat:2 }}</strong>
+                            </td>
+
+                            <td>{{ quotation.quotation_date|date:"M d, Y" }}</td>
+
+                            <td>{{ quotation.valid_until|date:"M d, Y" }}</td>
+
+                            <td>
+                                <div class="d-flex gap-2 flex-wrap">
+
+                                    <a href="{% url 'procurement:quotation-compare' quotation.purchase_request_item_id %}"
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-bar-chart me-1"></i>Compare
+                                    </a>
+
+                                    {% if perms.procurement.change_supplierquotation %}
+                                        <a href="{% url 'procurement:quotation-update' quotation.pk %}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            Edit
+                                        </a>
+                                    {% endif %}
+
+                                    {% if perms.procurement.delete_supplierquotation %}
+                                        <a href="{% url 'procurement:quotation-delete' quotation.pk %}"
+                                           class="btn btn-sm btn-outline-danger">
+                                            Delete
+                                        </a>
+                                    {% endif %}
+
+                                    {% if not perms.procurement.change_supplierquotation and not perms.procurement.delete_supplierquotation %}
+                                        <span class="text-muted small">View only</span>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-text fs-1 text-muted"></i>
+            <h5 class="mt-3">No quotations recorded</h5>
+            <p class="text-muted">
+                Add supplier quotations to begin comparing prices.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

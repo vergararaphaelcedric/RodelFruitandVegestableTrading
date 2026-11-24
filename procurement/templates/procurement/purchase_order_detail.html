@@ -1,0 +1,183 @@
+
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ po.po_number }}{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with page_title=po.po_number page_description="Purchase order details, supplier information, and ordered items." %}
+
+<div class="rs-panel mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="mb-1">Purchase Order Status</h5>
+            <p class="text-muted mb-0">
+                Created {{ po.created_at|date:"M d, Y h:i A" }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            {% if po.status == "issued" %}
+                <span class="badge text-bg-success fs-6">Issued</span>
+            {% else %}
+                <span class="badge text-bg-warning fs-6">Draft</span>
+            {% endif %}
+
+            <a href="{% url 'procurement:po-print' po.pk %}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-printer me-1"></i>Print
+            </a>
+
+            {% if po.status == "draft" and perms.procurement.change_purchaseorder %}
+                <a href="{% url 'procurement:po-edit' po.pk %}"
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="rs-panel h-100">
+            <h5 class="mb-3">Supplier Information</h5>
+
+            <p><strong>Supplier:</strong> {{ po.supplier_name }}</p>
+            <p><strong>Address:</strong> {{ po.supplier_address|default:"Not provided" }}</p>
+            <p><strong>Contact Person:</strong> {{ po.supplier_contact|default:"Not provided" }}</p>
+            <p><strong>Email:</strong> {{ po.supplier_email|default:"Not provided" }}</p>
+            <p><strong>Phone:</strong> {{ po.supplier_phone|default:"Not provided" }}</p>
+            <p class="mb-0"><strong>Payment Terms:</strong> {{ po.payment_terms|default:"Not specified" }}</p>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="rs-panel h-100">
+            <h5 class="mb-3">Order Information</h5>
+
+            <p><strong>PO Number:</strong> {{ po.po_number }}</p>
+            <p><strong>Purchase Request:</strong> {{ po.purchase_request.request_number }}</p>
+            <p><strong>Order Date:</strong> {{ po.order_date|date:"M d, Y" }}</p>
+
+            <p>
+                <strong>Expected Delivery:</strong>
+                {% if po.expected_delivery_date %}
+                    {{ po.expected_delivery_date|date:"M d, Y" }}
+                {% else %}
+                    Not specified
+                {% endif %}
+            </p>
+
+            <p><strong>Created By:</strong> {{ po.created_by.get_full_name|default:po.created_by.username }}</p>
+
+            {% if po.issued_by %}
+                <p><strong>Issued By:</strong> {{ po.issued_by.get_full_name|default:po.issued_by.username }}</p>
+                <p class="mb-0"><strong>Issued At:</strong> {{ po.issued_at|date:"M d, Y h:i A" }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="rs-panel mb-4">
+    <h5 class="mb-3">Ordered Items</h5>
+
+    {% if po.items.all %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Item Description</th>
+                        <th>Quantity</th>
+                        <th>Unit</th>
+                        <th>Unit Price</th>
+                        <th>Line Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in po.items.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ item.item_description }}</td>
+                            <td>{{ item.quantity|floatformat:2|intcomma }}</td>
+                            <td>{{ item.unit_of_measure }}</td>
+                            <td>₱{{ item.unit_price|floatformat:2|intcomma }}</td>
+                            <td>
+                                <strong>₱{{ item.line_total|floatformat:2|intcomma }}</strong>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+                <tfoot>
+                    <tr>
+                        <th colspan="5" class="text-end">Purchase Order Total</th>
+                        <th>₱{{ po.total_amount|floatformat:2|intcomma }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted mb-0">No items have been added to this purchase order.</p>
+    {% endif %}
+</div>
+
+<div class="rs-panel mb-4">
+    <h5 class="mb-3">Budget Approval Reference</h5>
+
+    <p>
+        <strong>Approval Status:</strong>
+        <span class="badge text-bg-success">
+            {{ po.budget_approval.get_status_display }}
+        </span>
+    </p>
+
+    <p>
+        <strong>Approved Amount:</strong>
+        ₱{{ po.budget_approval.total_amount|floatformat:2|intcomma }}
+    </p>
+
+    <p>
+        <strong>Approved By:</strong>
+        {{ po.budget_approval.decided_by.get_full_name|default:po.budget_approval.decided_by.username }}
+    </p>
+
+    <p class="mb-0">
+        <strong>Approval Date:</strong>
+        {{ po.budget_approval.decided_at|date:"M d, Y h:i A" }}
+    </p>
+</div>
+
+{% if po.notes %}
+    <div class="rs-panel mb-4">
+        <h5 class="mb-2">Additional Notes</h5>
+        <p class="mb-0">{{ po.notes|linebreaksbr }}</p>
+    </div>
+{% endif %}
+
+{% if po.status == "draft" and perms.procurement.change_purchaseorder %}
+    <div class="rs-panel">
+        <h5 class="mb-2">Issue Purchase Order</h5>
+        <p class="text-muted">
+            Review the supplier details and ordered items before issuing this purchase order.
+            Issued purchase orders should no longer be edited.
+        </p>
+
+        <form method="post" action="{% url 'procurement:po-issue' po.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary"
+                    onclick="return confirm('Are you sure you want to issue this purchase order?');">
+                <i class="bi bi-send me-2"></i>Issue Purchase Order
+            </button>
+        </form>
+    </div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{% url 'procurement:po-list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Purchase Orders
+    </a>
+</div>
+{% endblock %}

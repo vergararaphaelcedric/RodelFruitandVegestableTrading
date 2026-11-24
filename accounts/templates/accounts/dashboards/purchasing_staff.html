@@ -1,0 +1,65 @@
+
+{% extends "accounts/dashboards/_base.html" %}
+
+{% block dashboard_extra %}
+
+<div class="rs-panel mb-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-cart-check text-primary fs-4"></i>
+        <h5 class="mb-0">Purchasing Overview</h5>
+    </div>
+
+    <p class="text-muted mb-0">
+        Monitor pending Purchase Requests, review inventory shortages,
+        and coordinate the procurement of required items.
+    </p>
+</div>
+
+{% include "components/purchase_request_table.html" %}
+
+<div class="rs-panel">
+    <h5 class="mb-3">
+        <i class="bi bi-info-circle text-primary me-2"></i>
+        Purchasing Workflow
+    </h5>
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="border rounded p-3 h-100">
+                <strong>1. Requisition Approved</strong>
+                <p class="small text-muted mt-2 mb-0">
+                    The manager approves an employee's requisition.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="border rounded p-3 h-100">
+                <strong>2. Stock Checked</strong>
+                <p class="small text-muted mt-2 mb-0">
+                    Available inventory is reserved.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="border rounded p-3 h-100">
+                <strong>3. Purchase Request</strong>
+                <p class="small text-muted mt-2 mb-0">
+                    Outstanding shortages are recorded automatically.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="border rounded p-3 h-100">
+                <strong>4. Receiving</strong>
+                <p class="small text-muted mt-2 mb-0">
+                    Delivered items are recorded through receiving.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

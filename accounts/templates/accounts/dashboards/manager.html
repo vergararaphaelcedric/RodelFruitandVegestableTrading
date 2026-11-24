@@ -1,0 +1,49 @@
+
+{% extends "accounts/dashboards/_base.html" %}
+
+{% block dashboard_extra %}
+
+<div class="rs-panel mb-4">
+
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-clipboard-check text-primary fs-4"></i>
+        <h5 class="mb-0">Manager Overview</h5>
+    </div>
+
+    <p class="text-muted">
+        Monitor employee requisitions and review requests
+        submitted for management approval.
+    </p>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+
+        <a href="{% url 'manager-pending' %}" class="btn btn-primary">
+            <i class="bi bi-clipboard-check me-2"></i>
+            Pending Approvals
+        </a>
+
+        <a href="{% url 'manager-approved' %}" class="btn btn-success">
+            <i class="bi bi-check-circle me-2"></i>
+            Approved
+        </a>
+
+        <a href="{% url 'manager-rejected' %}" class="btn btn-danger">
+            <i class="bi bi-x-circle me-2"></i>
+            Rejected
+        </a>
+
+        <a href="{% url 'manager-approval-history' %}" class="btn btn-outline-primary">
+            <i class="bi bi-clock-history me-2"></i>
+            Approval History
+        </a>
+
+    </div>
+
+    <div class="alert alert-info mb-0">
+        <i class="bi bi-info-circle me-2"></i>
+        Use the dashboard statistics above to monitor requisition activity.
+    </div>
+
+</div>
+
+{% endblock %}

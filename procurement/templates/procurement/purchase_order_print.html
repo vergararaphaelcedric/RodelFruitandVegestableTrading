@@ -1,0 +1,214 @@
+
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Print {{ po.po_number }}{% endblock %}
+
+{% block content %}
+<style>
+    .po-print-sheet {
+        position: relative;
+        background: #fff;
+        color: #212529;
+        padding: 40px;
+        border: 1px solid #dee2e6;
+        overflow: hidden;
+    }
+
+    .po-draft-watermark {
+        position: absolute;
+        top: 42%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 100px;
+        font-weight: 800;
+        color: rgba(220, 53, 69, 0.10);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .po-print-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .po-print-sheet table th,
+    .po-print-sheet table td {
+        border: 1px solid #dee2e6;
+        padding: 10px;
+    }
+
+    @media print {
+        body {
+            background: #fff !important;
+        }
+
+        nav,
+        aside,
+        header,
+        footer,
+        .no-print {
+            display: none !important;
+        }
+
+        .container,
+        .container-fluid,
+        main {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .po-print-sheet {
+            border: none;
+            padding: 10px;
+        }
+
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-2">
+    <a href="{% url 'procurement:po-detail' po.pk %}"
+       class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Purchase Order
+    </a>
+
+    <button type="button" onclick="window.print()" class="btn btn-primary">
+        <i class="bi bi-printer me-2"></i>Print Purchase Order
+    </button>
+</div>
+
+<div class="po-print-sheet">
+    {% if po.status == "draft" %}
+        <div class="po-draft-watermark">DRAFT</div>
+    {% endif %}
+
+    <div class="po-print-content">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold mb-1">PURCHASE ORDER</h2>
+            <p class="text-muted mb-0">Internal Procurement Document</p>
+            <h4 class="mt-3">{{ po.po_number }}</h4>
+
+            {% if po.status == "draft" %}
+                <span class="badge text-bg-warning">DRAFT - NOT ISSUED</span>
+            {% else %}
+                <span class="badge text-bg-success">ISSUED</span>
+            {% endif %}
+        </div>
+
+        <hr>
+
+        <div class="row mb-4">
+            <div class="col-6">
+                <h6 class="fw-bold">SUPPLIER</h6>
+                <p class="mb-1"><strong>{{ po.supplier_name }}</strong></p>
+                <p class="mb-1">{{ po.supplier_address|default:"" }}</p>
+                <p class="mb-1">Contact: {{ po.supplier_contact|default:"Not provided" }}</p>
+                <p class="mb-1">Email: {{ po.supplier_email|default:"Not provided" }}</p>
+                <p class="mb-0">Phone: {{ po.supplier_phone|default:"Not provided" }}</p>
+            </div>
+
+            <div class="col-6">
+                <h6 class="fw-bold">ORDER INFORMATION</h6>
+                <p class="mb-1"><strong>PO Number:</strong> {{ po.po_number }}</p>
+                <p class="mb-1"><strong>Order Date:</strong> {{ po.order_date|date:"M d, Y" }}</p>
+                <p class="mb-1">
+                    <strong>Expected Delivery:</strong>
+                    {{ po.expected_delivery_date|date:"M d, Y"|default:"Not specified" }}
+                </p>
+                <p class="mb-1">
+                    <strong>Purchase Request:</strong>
+                    {{ po.purchase_request.request_number }}
+                </p>
+                <p class="mb-0">
+                    <strong>Payment Terms:</strong>
+                    {{ po.payment_terms|default:"Not specified" }}
+                </p>
+            </div>
+        </div>
+
+        <h6 class="fw-bold mb-3">ORDERED ITEMS</h6>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Item Description</th>
+                        <th>Quantity</th>
+                        <th>Unit</th>
+                        <th>Unit Price</th>
+                        <th>Line Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in po.items.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ item.item_description }}</td>
+                            <td>{{ item.quantity|floatformat:2|intcomma }}</td>
+                            <td>{{ item.unit_of_measure }}</td>
+                            <td>₱{{ item.unit_price|floatformat:2|intcomma }}</td>
+                            <td>₱{{ item.line_total|floatformat:2|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                No purchase order items found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+                <tfoot>
+                    <tr>
+                        <th colspan="5" class="text-end">TOTAL AMOUNT</th>
+                        <th>₱{{ po.total_amount|floatformat:2|intcomma }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        {% if po.notes %}
+            <div class="mt-4">
+                <h6 class="fw-bold">NOTES</h6>
+                <p>{{ po.notes|linebreaksbr }}</p>
+            </div>
+        {% endif %}
+
+        <div class="row mt-5">
+            <div class="col-6">
+                <p class="fw-bold mb-5">Prepared By:</p>
+                <p class="mb-0">{{ po.created_by.get_full_name|default:po.created_by.username }}</p>
+                <hr>
+                <small>Purchasing Staff</small>
+            </div>
+
+            <div class="col-6">
+                <p class="fw-bold mb-5">Issued By:</p>
+
+                {% if po.issued_by %}
+                    <p class="mb-0">{{ po.issued_by.get_full_name|default:po.issued_by.username }}</p>
+                {% else %}
+                    <p class="mb-0">Not yet issued</p>
+                {% endif %}
+
+                <hr>
+                <small>Authorized Personnel</small>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <small class="text-muted">
+                Generated from the Internal Procurement System.
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}

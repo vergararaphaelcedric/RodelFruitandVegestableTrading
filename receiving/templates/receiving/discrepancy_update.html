@@ -1,0 +1,141 @@
+
+{% extends "base.html" %}
+
+{% block title %}Update Supplier Resolution{% endblock %}
+
+{% block content %}
+
+{% include "components/page_header.html" with page_title="Supplier Resolution" page_description="Record supplier responses and track the resolution of delivery discrepancies." %}
+
+<div class="rs-panel mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Discrepancy Information</h5>
+        <span class="badge bg-warning text-dark">
+            {{ discrepancy.get_status_display }}
+        </span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <small class="text-muted">Receipt Number</small>
+            <div class="fw-semibold">
+                {{ discrepancy.receipt_item.receipt.receipt_number }}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <small class="text-muted">Purchase Order</small>
+            <div class="fw-semibold">
+                {{ discrepancy.receipt_item.receipt.purchase_order.po_number }}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <small class="text-muted">Supplier</small>
+            <div class="fw-semibold">
+                {{ discrepancy.receipt_item.receipt.purchase_order.supplier_name }}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <small class="text-muted">Item</small>
+            <div class="fw-semibold">
+                {{ discrepancy.receipt_item.purchase_order_item.item_description }}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <small class="text-muted">Discrepancy Type</small>
+            <div class="fw-semibold">
+                {{ discrepancy.get_discrepancy_type_display }}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <small class="text-muted">Quantity Affected</small>
+            <div class="fw-semibold">
+                {{ discrepancy.quantity }}
+            </div>
+        </div>
+
+        <div class="col-12">
+            <small class="text-muted">Reported Description</small>
+            <p class="mb-0">
+                {{ discrepancy.description }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="rs-panel">
+    <h5 class="mb-3">Supplier Resolution Details</h5>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if resolution_form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ resolution_form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="mb-3">
+            <label class="form-label">
+                Supplier Reference
+            </label>
+            {{ resolution_form.supplier_reference }}
+
+            {% for error in resolution_form.supplier_reference.errors %}
+                <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Resolution Status
+            </label>
+            {{ resolution_form.status }}
+
+            {% for error in resolution_form.status.errors %}
+                <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Promised Replacement Date
+            </label>
+            {{ resolution_form.promised_replacement_date }}
+
+            {% for error in resolution_form.promised_replacement_date.errors %}
+                <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Resolution Notes
+            </label>
+            {{ resolution_form.resolution_notes }}
+
+            {% for error in resolution_form.resolution_notes.errors %}
+                <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <a
+                href="{% url 'receiving:discrepancy-list' %}"
+                class="btn btn-outline-secondary"
+            >
+                Cancel
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                Save Resolution
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

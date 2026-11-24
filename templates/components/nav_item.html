@@ -1,0 +1,13 @@
+
+{% if item.disabled or not item.url %}
+<div class="rs-nav-item is-disabled" aria-disabled="true">
+    <i class="bi {{ item.icon }}"></i>
+    <span>{{ item.label }}</span>
+    <span class="ms-auto small">Soon</span>
+</div>
+{% else %}
+<a href="{{ item.url }}" class="rs-nav-item">
+    <i class="bi {{ item.icon }}"></i>
+    <span>{{ item.label }}</span>
+</a>
+{% endif %}

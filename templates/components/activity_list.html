@@ -1,0 +1,34 @@
+
+{% load ui %}
+
+<div class="rs-panel">
+    <h5 class="mb-3">{{ title|default:"Recent Activity" }}</h5>
+
+    {% if activities %}
+        <div class="list-group list-group-flush">
+            {% for activity in activities %}
+                <div class="list-group-item px-0">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ activity.title }}</strong>
+                            <p class="text-muted small mb-1">
+                                {{ activity.description }}
+                            </p>
+                            <small class="text-muted">
+                                {{ activity.created_at|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+
+                        {% if activity.status %}
+                            <span class="badge text-bg-{{ activity.status|status_class }}">
+                                {{ activity.status }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted mb-0">No recent activity available.</p>
+    {% endif %}
+</div>

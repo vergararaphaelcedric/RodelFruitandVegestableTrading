@@ -1,0 +1,109 @@
+
+<div class="rs-panel mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h5 class="mb-1">Pending Purchase Requests</h5>
+            <p class="text-muted small mb-0">
+                Items that need to be purchased due to inventory shortages
+            </p>
+        </div>
+        <i class="bi bi-cart-check text-primary fs-4"></i>
+    </div>
+
+    {% if pending_purchase_requests %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Purchase Request No.</th>
+                        <th>Requisition</th>
+                        <th>Requested By</th>
+                        <th>Items to Purchase</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for purchase_request in pending_purchase_requests %}
+                        <tr>
+                            <td class="fw-semibold">
+                                {{ purchase_request.request_number }}
+                            </td>
+
+                            <td>
+                                {{ purchase_request.requisition.requisition_number }}
+                            </td>
+
+                            <td>
+                                {{ purchase_request.requisition.requested_by }}
+                            </td>
+
+                            <td>
+                                {% for item in purchase_request.items.all %}
+                                    <div class="mb-2">
+                                        <strong>{{ item.item_description }}</strong>
+
+                                        <div class="small text-muted">
+                                            Reserved: {{ item.quantity_reserved }}<br>
+                                            To purchase:
+                                            <span class="text-danger fw-semibold">
+                                                {{ item.quantity_shortage }}
+                                                {{ item.unit_of_measure }}
+                                            </span>
+                                        </div>
+
+                                        {% if not item.inventory_item %}
+                                            <span class="badge text-bg-secondary">
+                                                Not in Inventory
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </td>
+
+                            <td>
+                                <span class="badge text-bg-warning">
+                                    {{ purchase_request.get_status_display }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ purchase_request.created_at|date:"M d, Y" }}
+                            </td>
+
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+
+                                    {% if perms.procurement.change_purchaserequest %}
+                                        <a
+                                            href="{% url 'procurement:purchase-request-detail' purchase_request.pk %}"
+                                            class="btn btn-sm btn-success"
+                                        >
+                                            <i class="bi bi-eye"></i>
+                                            Review
+                                        </a>
+
+                                        <a
+                                            href="{% url 'procurement:purchase-request-update' purchase_request.pk %}"
+                                            class="btn btn-sm btn-primary"
+                                        >
+                                            <i class="bi bi-pencil-square"></i>
+                                            Update
+                                        </a>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted mb-0">
+            No pending Purchase Requests are available.
+        </p>
+    {% endif %}
+</div>

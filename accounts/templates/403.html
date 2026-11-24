@@ -1,0 +1,33 @@
+
+{% extends "base.html" %}
+
+{% block title %}Access Denied{% endblock %}
+
+{% block content %}
+
+<div class="card" style="max-width: 650px; margin: 60px auto; text-align: center;">
+
+    <h1 style="font-size: 64px; color: #dc3545; margin-bottom: 10px;">
+        403
+    </h1>
+
+    <h2>Access Denied</h2>
+
+    <p>
+        You don't have permission to access this page.
+    </p>
+
+    <p class="muted">
+        Your account role does not allow this action.
+        Contact your system administrator if you believe
+        you need access.
+    </p>
+
+    <a href="{% url 'home' %}" class="button">
+        Return to Dashboard
+    </a>
+
+</div>
+
+{% endblock %}
+

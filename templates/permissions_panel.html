@@ -1,0 +1,19 @@
+
+<div class="rs-panel">
+    <h5 class="mb-3">Account Permissions</h5>
+
+    {% if permissions %}
+        <ul class="list-group list-group-flush">
+            {% for permission in permissions %}
+                <li class="list-group-item px-0">
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                    {{ permission }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted mb-0">
+            Your assigned role determines your system permissions.
+        </p>
+    {% endif %}
+</div>

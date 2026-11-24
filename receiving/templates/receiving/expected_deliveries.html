@@ -1,0 +1,145 @@
+
+{% extends "base.html" %}
+
+{% block title %}Expected Deliveries{% endblock %}
+
+{% block content %}
+
+{% include "components/page_header.html" with page_title="Expected Deliveries" page_description="Verify issued purchase orders and monitor incoming deliveries." %}
+
+<div class="rs-panel mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="mb-1">Incoming Purchase Orders</h5>
+            <p class="text-muted mb-0">
+                Review the quantities suppliers are expected to deliver.
+            </p>
+        </div>
+
+        <span class="badge text-bg-primary">
+            {{ expected_deliveries|length }} Pending Purchase Orders
+        </span>
+    </div>
+</div>
+
+<div class="rs-panel">
+
+    {% if expected_deliveries %}
+
+        {% for delivery in expected_deliveries %}
+
+            <div class="border rounded p-3 mb-4">
+
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <div>
+                        <h5 class="mb-1">
+                            {{ delivery.po_number }}
+                        </h5>
+
+                        <div class="text-muted">
+                            <i class="bi bi-building me-1"></i>
+                            {{ delivery.supplier_name }}
+                        </div>
+                    </div>
+
+                    <div class="text-md-end">
+                        <small class="text-muted d-block">
+                            Expected Delivery
+                        </small>
+
+                        {% if delivery.expected_delivery_date %}
+                            <strong>
+                                {{ delivery.expected_delivery_date|date:"M d, Y" }}
+                            </strong>
+                        {% else %}
+                            <span class="text-muted">
+                                Not specified
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-3">
+
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item Description</th>
+                                <th>Unit</th>
+                                <th>Ordered</th>
+                                <th>Accepted</th>
+                                <th>Outstanding</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in delivery.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.description }}</strong>
+                                    </td>
+
+                                    <td>{{ item.unit }}</td>
+
+                                    <td>{{ item.ordered_quantity }}</td>
+
+                                    <td>
+                                        <span class="text-success fw-semibold">
+                                            {{ item.accepted_quantity }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <span class="badge text-bg-warning">
+                                            {{ item.outstanding_quantity }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end flex-wrap gap-2">
+
+                    <a
+                        href="{% url 'receiving:purchase-order-verification' delivery.purchase_order_id %}"
+                        class="btn btn-outline-primary"
+                    >
+                        <i class="bi bi-clipboard-check me-1"></i>
+                        Verify Purchase Order
+                    </a>
+
+                    <a
+                        href="{% url 'receiving:record-delivery' delivery.purchase_order_id %}"
+                        class="btn btn-primary"
+                    >
+                        <i class="bi bi-truck me-1"></i>
+                        Record Delivery
+                    </a>
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="text-center py-5">
+            <i class="bi bi-truck fs-1 text-muted"></i>
+
+            <h5 class="mt-3">No Expected Deliveries</h5>
+
+            <p class="text-muted mb-0">
+                There are currently no issued purchase orders with outstanding quantities.
+                New deliveries will appear here when purchase orders are issued.
+            </p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

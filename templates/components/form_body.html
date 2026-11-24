@@ -1,0 +1,12 @@
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        <strong>Please correct the following errors:</strong>
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<div class="rs-form-fields">
+    {{ form.as_p }}
+</div>
+
