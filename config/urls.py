@@ -30,6 +30,7 @@ urlpatterns = [
     path("receiving/", include("receiving.urls")),
     path("inventory/", include("inventory.urls")),
     path("", include("accounts.urls")),
+    path("", include("reports.urls")),
 ]
 
 handler403 = "accounts.views.custom_permission_denied"

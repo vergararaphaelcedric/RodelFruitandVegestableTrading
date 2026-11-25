@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'procurement',
     'receiving',
     'audit_trail',
+    "reports",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
