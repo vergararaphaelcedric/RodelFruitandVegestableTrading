@@ -596,7 +596,7 @@ def acknowledge_item_assignment(
 
     assignment = (
         ItemAssignment.objects
-        .select_for_update()
+        .select_for_update(of=("self",))
         .select_related(
             "assigned_to",
             "requisition_item",

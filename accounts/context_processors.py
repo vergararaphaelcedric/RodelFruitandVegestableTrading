@@ -58,6 +58,15 @@ def dashboard_ui(request):
         "disabled": False,
     })
 
+    # Reports - administrators only
+    if role == "administrator":
+        module_items.append({
+            "label": "Reports",
+            "url": reverse("report-index"),
+            "icon": "bi-bar-chart-line",
+            "disabled": False,
+        })
+
     # My Items - employees can view their own assignments
     if (
         role == "employee"
