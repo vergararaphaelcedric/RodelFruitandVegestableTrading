@@ -5,6 +5,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Sum
 
+from audit_trail.service import log_event
+
 from inventory.models import (
     InventoryItem,
     InventoryTransaction,
@@ -79,7 +81,9 @@ def _update_purchase_request_status(purchase_request):
                 return
 
     purchase_request.status = PurchaseRequest.Status.RECEIVED
-    purchase_request.save(update_fields=["status", "updated_at"])
+    purchase_request.save(
+        update_fields=["status", "updated_at"]
+    )
 
 
 @transaction.atomic
@@ -145,13 +149,14 @@ def record_delivery(
         )
 
     po_items = {
-       po_item.pk: po_item
-       for po_item in (
-          purchase_order.items
-          .select_for_update(of=("self",))
-          .select_related("inventory_item")
+        po_item.pk: po_item
+        for po_item in (
+            purchase_order.items
+            .select_for_update(of=("self",))
+            .select_related("inventory_item")
         )
-}
+    }
+
     prepared_items = []
     seen_item_ids = set()
 
@@ -331,7 +336,7 @@ def record_delivery(
         receipt_item.full_clean()
         receipt_item.save()
 
-              # Record the inventory ledger entry only for accepted stock.
+        # Record the inventory ledger entry only for accepted stock.
         # The stock quantity was already updated above.
         if inventory_item and accepted > 0:
             ledger_entry = InventoryTransaction.record(
@@ -359,6 +364,7 @@ def record_delivery(
                 item_created=False,
                 registered_by=user,
             )
+
         # Record damaged and incorrect items as discrepancies.
         discrepancy_entries = [
             (
@@ -398,6 +404,39 @@ def record_delivery(
     # have been accepted across its purchase orders.
     _update_purchase_request_status(
         purchase_order.purchase_request
+    )
+
+    # Audit the completed delivery inspection.
+    log_event(
+        action="DELIVERY_INSPECTED",
+        category="RECEIVING",
+        outcome="SUCCESS",
+        description=(
+            f"Delivery {receipt.receipt_number} was recorded "
+            f"for Purchase Order {purchase_order.po_number}."
+        ),
+        actor=user,
+        details={
+            "purchase_order_id": purchase_order.pk,
+            "purchase_order_number": purchase_order.po_number,
+            "receipt_id": receipt.pk,
+            "receipt_number": receipt.receipt_number,
+            "delivery_note_number": receipt.delivery_note_number,
+            "delivery_outcome": receipt.outcome,
+            "total_accepted_quantity": str(total_accepted),
+            "total_discrepancy_quantity": str(total_discrepancies),
+            "items": [
+                {
+                    "purchase_order_item_id": data["po_item"].pk,
+                    "item_description": data["po_item"].item_description,
+                    "delivered_quantity": str(data["delivered"]),
+                    "accepted_quantity": str(data["accepted"]),
+                    "damaged_quantity": str(data["damaged"]),
+                    "incorrect_quantity": str(data["incorrect"]),
+                }
+                for data in prepared_items
+            ],
+        },
     )
 
     return receipt

@@ -7,6 +7,8 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import ListView, TemplateView
 
+from audit_trail.service import log_event
+
 from procurement.models import PurchaseOrder
 
 from .forms import (
@@ -383,6 +385,9 @@ class DiscrepancyUpdateView(
         return context
 
     def post(self, request, *args, **kwargs):
+        previous_status = self.discrepancy.status
+
+
         resolution_form = DeliveryDiscrepancyResolutionForm(
             request.POST,
             instance=self.discrepancy,
@@ -407,6 +412,30 @@ class DiscrepancyUpdateView(
                 discrepancy.resolved_at = timezone.now()
 
             discrepancy.save()
+
+            receipt = discrepancy.receipt_item.receipt
+            purchase_order = receipt.purchase_order
+
+            log_event(
+                action="DISCREPANCY_UPDATED",
+                category="RECEIVING",
+                outcome="SUCCESS",
+                description=(
+                    f"Discrepancy for delivery {receipt.receipt_number} "
+                    "was updated."
+                ),
+                request=request,
+                actor=request.user,
+                details={
+                    "discrepancy_id": discrepancy.pk,
+                    "discrepancy_type": discrepancy.discrepancy_type,
+                    "discrepancy_quantity": str(discrepancy.quantity),
+                    "previous_status": previous_status,
+                    "new_status": discrepancy.status,
+                    "purchase_order_number": purchase_order.po_number,
+                    "receipt_number": receipt.receipt_number,
+                },
+            )
 
             messages.success(
                 request,

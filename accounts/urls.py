@@ -9,11 +9,10 @@ urlpatterns = [
     # Home and authentication
     path("", views.HomeRedirectView.as_view(), name="home"),
 
+    # Audited login with failed-login tracking and lockout
     path(
         "login/",
-        auth_views.LoginView.as_view(
-            template_name="accounts/login.html"
-        ),
+        views.AuditedLoginView.as_view(),
         name="login",
     ),
 

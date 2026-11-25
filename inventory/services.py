@@ -6,6 +6,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from audit_trail.service import log_event
+
 from inventory.models import (
     Asset,
     InventoryItem,
@@ -182,6 +184,28 @@ def register_accepted_receipt_item(
         raise ValidationError(
             "The receipt item changed during registration. Please try again."
         )
+
+    log_event(
+        action="ITEM_REGISTERED",
+        category="INVENTORY",
+        outcome="SUCCESS",
+        description=(
+            f"Accepted item {inventory_item.name} was registered "
+            f"from delivery receipt {receipt_item.receipt.receipt_number}."
+        ),
+        actor=user,
+        details={
+            "registration_id": registration.pk,
+            "receipt_item_id": receipt_item.pk,
+            "receipt_number": receipt_item.receipt.receipt_number,
+            "purchase_order_number": purchase_order.po_number,
+            "inventory_item_id": inventory_item.pk,
+            "inventory_item_name": inventory_item.name,
+            "quantity_registered": str(accepted_quantity),
+            "item_created": item_created,
+            "ledger_entry_id": ledger_entry.pk,
+        },
+    )
 
     return registration
 
@@ -511,6 +535,34 @@ def issue_requisition_item(
         ]
     )
 
+    # Audit successful issuance after assignment and stock updates.
+    log_event(
+        action="ASSET_ASSIGNED",
+        category="INVENTORY",
+        outcome="SUCCESS",
+        description=(
+            f"Issued {quantity} of {inventory_item.name} "
+            f"for requisition {requisition.requisition_number}."
+        ),
+        actor=user,
+        details={
+            "requisition_number": requisition.requisition_number,
+            "requisition_item_id": line.pk,
+            "inventory_item_id": inventory_item.pk,
+            "inventory_item_name": inventory_item.name,
+            "issued_quantity": str(quantity),
+            "assignment_ids": [
+                assignment.pk for assignment in assignments
+            ],
+            "asset_tags": [
+                assignment.asset.asset_tag
+                for assignment in assignments
+                if assignment.asset_id
+            ],
+            "inventory_transaction_id": ledger_entry.pk,
+        },
+    )
+
     return {
         "assignments": assignments,
         "inventory_transaction": ledger_entry,
@@ -549,6 +601,8 @@ def acknowledge_item_assignment(
             "assigned_to",
             "requisition_item",
             "requisition_item__requisition",
+            "inventory_item",
+            "asset",
         )
         .filter(
             pk=assignment_id,
@@ -606,5 +660,37 @@ def acknowledge_item_assignment(
                 "updated_at",
             ]
         )
+
+    # Audit acknowledgement after assignment and requisition updates.
+    log_event(
+        action="ASSET_ACKNOWLEDGED",
+        category="INVENTORY",
+        outcome="SUCCESS",
+        description=(
+            f"Assignment {assignment.pk} was acknowledged by "
+            f"{user.get_username()} for requisition "
+            f"{requisition.requisition_number}."
+        ),
+        actor=user,
+        details={
+            "assignment_id": assignment.pk,
+            "requisition_number": requisition.requisition_number,
+            "requisition_item_id": assignment.requisition_item_id,
+            "inventory_item_id": assignment.inventory_item_id,
+            "inventory_item_name": assignment.inventory_item.name,
+            "asset_id": assignment.asset_id,
+            "asset_tag": (
+                assignment.asset.asset_tag
+                if assignment.asset_id
+                else None
+            ),
+            "acknowledged_at": (
+                assignment.acknowledged_at.isoformat()
+                if assignment.acknowledged_at
+                else None
+            ),
+            "requisition_status": requisition.status,
+        },
+    )
 
     return assignment

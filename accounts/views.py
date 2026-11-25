@@ -1,12 +1,14 @@
 
 from django.contrib import messages
 from django.contrib.auth.forms import AdminPasswordChangeForm
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.mixins import (
     LoginRequiredMixin,
     PermissionRequiredMixin,
     UserPassesTestMixin,
 )
 from django.db import models
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -16,6 +18,13 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
     View,
+)
+
+from audit_trail.service import log_event
+from audit_trail.throttle import (
+    clear_failed_logins,
+    is_locked_out,
+    register_failed_login,
 )
 
 from inventory.models import InventoryItem
@@ -34,14 +43,103 @@ def manageable_users(user):
         "department"
     ).order_by("username")
 
-    # Non-superusers must never manage superuser accounts.
     if not user.is_superuser:
         queryset = queryset.filter(is_superuser=False)
 
     return queryset
 
 
-class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+class AuditedLoginView(LoginView):
+    """Login view with audit logging and failed-login throttling."""
+
+    template_name = "accounts/login.html"
+
+    def _username(self):
+        return self.request.POST.get("username", "").strip()
+
+    def _ip_address(self):
+        return self.request.META.get("REMOTE_ADDR")
+
+    def post(self, request, *args, **kwargs):
+        username = self._username()
+        ip_address = self._ip_address()
+
+        if is_locked_out(username, ip_address):
+            log_event(
+                action="LOGIN_LOCKED",
+                category="SECURITY",
+                outcome="BLOCKED",
+                description=(
+                    "Login blocked due to repeated failed attempts."
+                ),
+                request=request,
+                details={
+                    "username": username,
+                },
+            )
+
+            return HttpResponse(
+                "Too many failed login attempts. "
+                "Please try again in 15 minutes.",
+                status=429,
+            )
+
+        return super().post(request, *args, **kwargs)
+
+    def form_invalid(self, form):
+        username = self._username()
+        ip_address = self._ip_address()
+
+        attempts = register_failed_login(
+            username,
+            ip_address,
+        )
+
+        log_event(
+            action="LOGIN_FAILED",
+            category="SECURITY",
+            outcome="FAILED",
+            description="A login attempt failed.",
+            request=self.request,
+            details={
+                "username": username,
+                "failed_attempts": attempts,
+            },
+        )
+
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        username = self._username()
+        ip_address = self._ip_address()
+        user = form.get_user()
+
+        response = super().form_valid(form)
+
+        clear_failed_logins(
+            username,
+            ip_address,
+        )
+
+        log_event(
+            action="LOGIN_SUCCESS",
+            category="SECURITY",
+            outcome="SUCCESS",
+            description="User logged in successfully.",
+            request=self.request,
+            actor=user,
+            details={
+                "username": username,
+            },
+        )
+
+        return response
+
+
+class RoleRequiredMixin(
+    LoginRequiredMixin,
+    UserPassesTestMixin,
+):
     """Restrict a page to users with a specific role."""
 
     required_role = None
@@ -94,11 +192,14 @@ class DashboardView(RoleRequiredMixin, TemplateView):
 
         if can_view_requisitions:
             requisitions = Requisition.objects.select_related(
-                "requested_by", "department"
+                "requested_by",
+                "department",
             )
 
             if user.role == User.Role.EMPLOYEE:
-                requisitions = requisitions.filter(requested_by=user)
+                requisitions = requisitions.filter(
+                    requested_by=user
+                )
 
         if can_view_inventory:
             inventory_items = InventoryItem.objects.filter(
@@ -113,11 +214,15 @@ class DashboardView(RoleRequiredMixin, TemplateView):
             stats = [
                 {
                     "label": "Active Users",
-                    "value": User.objects.filter(is_active=True).count(),
+                    "value": User.objects.filter(
+                        is_active=True
+                    ).count(),
                 },
                 {
                     "label": "Departments",
-                    "value": Department.objects.filter(is_active=True).count(),
+                    "value": Department.objects.filter(
+                        is_active=True
+                    ).count(),
                 },
                 {
                     "label": "Requisitions",
@@ -294,7 +399,11 @@ class ReceivingDashboardView(DashboardView):
     required_role = User.Role.RECEIVING_STAFF
 
 
-class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class UserListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    ListView,
+):
     model = User
     template_name = "accounts/user_list.html"
     context_object_name = "users"
@@ -323,11 +432,28 @@ class UserCreateView(
         return context
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+
+        log_event(
+            action="USER_CREATED",
+            category="USER_MANAGEMENT",
+            outcome="SUCCESS",
+            description="A user account was created.",
+            request=self.request,
+            actor=self.request.user,
+            details={
+                "target_user_id": self.object.pk,
+                "target_username": self.object.username,
+                "target_role": self.object.role,
+            },
+        )
+
         messages.success(
             self.request,
             "User account created successfully.",
         )
-        return super().form_valid(form)
+
+        return response
 
 
 class UserUpdateView(
@@ -357,11 +483,48 @@ class UserUpdateView(
         return context
 
     def form_valid(self, form):
+        old_user = self.get_object()
+        old_username = old_user.username
+        old_role = old_user.role
+
+        response = super().form_valid(form)
+
+        log_event(
+            action="USER_UPDATED",
+            category="USER_MANAGEMENT",
+            outcome="SUCCESS",
+            description="A user account was updated.",
+            request=self.request,
+            actor=self.request.user,
+            details={
+                "target_user_id": self.object.pk,
+                "old_username": old_username,
+                "new_username": self.object.username,
+            },
+        )
+
+        if old_role != self.object.role:
+            log_event(
+                action="USER_ROLE_CHANGED",
+                category="USER_MANAGEMENT",
+                outcome="SUCCESS",
+                description="A user's role was changed.",
+                request=self.request,
+                actor=self.request.user,
+                details={
+                    "target_user_id": self.object.pk,
+                    "target_username": self.object.username,
+                    "old_role": old_role,
+                    "new_role": self.object.role,
+                },
+            )
+
         messages.success(
             self.request,
             "User account updated successfully.",
         )
-        return super().form_valid(form)
+
+        return response
 
 
 class UserPasswordView(
@@ -394,7 +557,24 @@ class UserPasswordView(
         return context
 
     def form_valid(self, form):
+        target_user = self.get_target_user()
+
         form.save()
+
+        log_event(
+            action="USER_PASSWORD_CHANGED",
+            category="USER_MANAGEMENT",
+            outcome="SUCCESS",
+            description=(
+                "A user's password was changed by an authorized user."
+            ),
+            request=self.request,
+            actor=self.request.user,
+            details={
+                "target_user_id": target_user.pk,
+                "target_username": target_user.username,
+            },
+        )
 
         messages.success(
             self.request,
