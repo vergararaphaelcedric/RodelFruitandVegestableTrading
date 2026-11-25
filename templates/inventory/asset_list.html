@@ -1,0 +1,188 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title|default:"Assets" }}</h2>
+            <p class="text-muted mb-0">
+                {{ page_description|default:"Track durable equipment and asset tags." }}
+            </p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+
+                <div class="col-md-6">
+                    <label for="asset-search" class="form-label">
+                        Search assets
+                    </label>
+                    <input
+                        type="text"
+                        name="q"
+                        id="asset-search"
+                        class="form-control"
+                        value="{{ search_query }}"
+                        placeholder="Asset tag, serial number, item name..."
+                    >
+                </div>
+
+                <div class="col-md-4">
+                    <label for="asset-status" class="form-label">
+                        Status
+                    </label>
+                    <select
+                        name="status"
+                        id="asset-status"
+                        class="form-select"
+                    >
+                        <option value="">All statuses</option>
+                        <option value="available"
+                            {% if selected_status == "available" %}selected{% endif %}>
+                            Available
+                        </option>
+                        <option value="assigned"
+                            {% if selected_status == "assigned" %}selected{% endif %}>
+                            Assigned
+                        </option>
+                        <option value="retired"
+                            {% if selected_status == "retired" %}selected{% endif %}>
+                            Retired
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        Search
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            {% if assets %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Asset Tag</th>
+                                <th>Item</th>
+                                <th>Item Code</th>
+                                <th>Serial Number</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for asset in assets %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ asset.asset_tag }}</strong>
+                                    </td>
+
+                                    <td>
+                                        {{ asset.inventory_item.name }}
+                                    </td>
+
+                                    <td>
+                                        {{ asset.inventory_item.item_code }}
+                                    </td>
+
+                                    <td>
+                                        {{ asset.serial_number|default:"—" }}
+                                    </td>
+
+                                    <td>
+                                        {% if asset.status == "available" %}
+                                            <span class="badge bg-success">
+                                                Available
+                                            </span>
+                                        {% elif asset.status == "assigned" %}
+                                            <span class="badge bg-primary">
+                                                Assigned
+                                            </span>
+                                        {% elif asset.status == "retired" %}
+                                            <span class="badge bg-secondary">
+                                                Retired
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">
+                                                {{ asset.get_status_display }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="text-end">
+                                        <a
+                                            href="{% url 'inventory-asset-detail' asset.pk %}"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if is_paginated %}
+                    <nav aria-label="Asset pages">
+                        <ul class="pagination justify-content-end mb-0">
+
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a
+                                        class="page-link"
+                                        href="?page={{ page_obj.previous_page_number }}&q={{ search_query|urlencode }}&status={{ selected_status|urlencode }}"
+                                    >
+                                        Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item disabled">
+                                <span class="page-link">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a
+                                        class="page-link"
+                                        href="?page={{ page_obj.next_page_number }}&q={{ search_query|urlencode }}&status={{ selected_status|urlencode }}"
+                                    >
+                                        Next
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                        </ul>
+                    </nav>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center py-5">
+                    <h5>No assets found</h5>
+                    <p class="text-muted mb-0">
+                        Assets will appear here after durable equipment is issued.
+                    </p>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

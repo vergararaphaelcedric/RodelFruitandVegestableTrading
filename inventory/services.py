@@ -259,8 +259,25 @@ def issue_requisition_item(
             f"Cannot issue {quantity}. Outstanding quantity is {outstanding}."
         )
 
-    # Resolve the inventory item.
-    if inventory_item_id:
+    # Normalize the submitted inventory item ID.
+    # HTML form values arrive as strings, while model IDs are integers.
+    if inventory_item_id in ("", None):
+        inventory_item_id = None
+    else:
+        try:
+            inventory_item_id = int(inventory_item_id)
+        except (TypeError, ValueError):
+            raise ValidationError(
+                "Please select a valid inventory item."
+            )
+
+        if inventory_item_id <= 0:
+            raise ValidationError(
+                "Please select a valid inventory item."
+            )
+
+    # Resolve and validate the inventory item.
+    if inventory_item_id is not None:
         if (
             line.inventory_item_id
             and line.inventory_item_id != inventory_item_id
@@ -269,19 +286,23 @@ def issue_requisition_item(
                 "The selected item does not match this requisition line."
             )
 
-        if not line.inventory_item_id:
-            inventory_item = (
-                InventoryItem.objects
-                .select_for_update()
-                .filter(pk=inventory_item_id, is_active=True)
-                .first()
+        inventory_item = (
+            InventoryItem.objects
+            .select_for_update()
+            .filter(
+                pk=inventory_item_id,
+                is_active=True,
+            )
+            .first()
+        )
+
+        if inventory_item is None:
+            raise ValidationError(
+                "The selected inventory item does not exist or is inactive."
             )
 
-            if inventory_item is None:
-                raise ValidationError(
-                    "The selected inventory item does not exist or is inactive."
-                )
-
+        # Link a free-text requisition line to the selected inventory item.
+        if not line.inventory_item_id:
             line.inventory_item = inventory_item
 
             RequisitionItem.objects.filter(
@@ -291,13 +312,6 @@ def issue_requisition_item(
                 inventory_item=inventory_item,
                 item_description=inventory_item.name,
                 unit_of_measure=inventory_item.unit_of_measure,
-            )
-
-        else:
-            inventory_item = (
-                InventoryItem.objects
-                .select_for_update()
-                .get(pk=line.inventory_item_id)
             )
 
     else:
@@ -488,7 +502,6 @@ def issue_requisition_item(
     )
 
     # Issued items still require employee acknowledgement.
-    # Therefore, issuance alone must not mark the requisition fulfilled.
     requisition.status = Requisition.Status.PARTIALLY_FULFILLED
 
     requisition.save(

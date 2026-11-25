@@ -2,6 +2,8 @@
 from django.urls import reverse
 
 from procurement.models import PurchaseRequest
+from requisitions.models import Requisition
+from inventory.models import ItemAssignment
 
 
 def dashboard_ui(request):
@@ -39,6 +41,7 @@ def dashboard_ui(request):
     # Business modules
     module_items = []
 
+    # Employee requisition links
     if role == "employee":
         module_items.append({
             "label": "My Requisitions",
@@ -47,12 +50,25 @@ def dashboard_ui(request):
             "disabled": False,
         })
 
+    # New requisition
     module_items.append({
         "label": "New Requisition",
         "url": reverse("requisition-create"),
         "icon": "bi-plus-circle",
         "disabled": False,
     })
+
+    # My Items - employees can view their own assignments
+    if (
+        role == "employee"
+        and user.has_perm("inventory.view_itemassignment")
+    ):
+        module_items.append({
+            "label": "My Items",
+            "url": reverse("inventory-my-items"),
+            "icon": "bi-person-check",
+            "disabled": False,
+        })
 
     # Inventory navigation
     inventory_items = []
@@ -85,6 +101,36 @@ def dashboard_ui(request):
             "label": "Item Categories",
             "url": reverse("inventory-category-list"),
             "icon": "bi-tags",
+            "disabled": False,
+        })
+
+    # Assets
+    if user.has_perm("inventory.view_asset"):
+        inventory_items.append({
+            "label": "Assets",
+            "url": reverse("inventory-asset-list"),
+            "icon": "bi-pc-display",
+            "disabled": False,
+        })
+
+    # Full assignments list - inventory staff and administrators only
+    if (
+        role in ["inventory_staff", "administrator"]
+        and user.has_perm("inventory.view_itemassignment")
+    ):
+        inventory_items.append({
+            "label": "Assignments",
+            "url": reverse("inventory-assignment-list"),
+            "icon": "bi-person-lines-fill",
+            "disabled": False,
+        })
+
+    # Fulfil requisitions
+    if user.has_perm("inventory.issue_items"):
+        inventory_items.append({
+            "label": "Fulfil Requisitions",
+            "url": reverse("inventory-fulfil-requisitions"),
+            "icon": "bi-box-arrow-up",
             "disabled": False,
         })
 
@@ -191,6 +237,7 @@ def dashboard_ui(request):
     notifications = []
     notification_count = 0
 
+    # Purchasing staff: pending purchase requests
     if role == "purchasing_staff":
         pending_requests = PurchaseRequest.objects.filter(
             status=PurchaseRequest.Status.PENDING
@@ -198,7 +245,7 @@ def dashboard_ui(request):
             "requisition"
         ).order_by("-created_at")
 
-        notification_count = pending_requests.count()
+        notification_count += pending_requests.count()
 
         for purchase_request in pending_requests[:5]:
             notifications.append({
@@ -210,6 +257,51 @@ def dashboard_ui(request):
                     f"Requisition "
                     f"{purchase_request.requisition.requisition_number} "
                     f"has outstanding items to purchase."
+                ),
+            })
+
+    # Employee: items awaiting acknowledgement
+    if role == "employee":
+        pending_assignments = ItemAssignment.objects.filter(
+            assigned_to=user,
+            status=ItemAssignment.Status.PENDING_ACKNOWLEDGEMENT,
+        ).select_related(
+            "requisition_item",
+            "requisition_item__requisition",
+            "inventory_item",
+        ).order_by("-issued_at")
+
+        notification_count += pending_assignments.count()
+
+        for assignment in pending_assignments[:5]:
+            notifications.append({
+                "title": "Item Acknowledgement Required",
+                "message": (
+                    f"Please acknowledge receipt of "
+                    f"{assignment.inventory_item.name} "
+                    f"for requisition "
+                    f"{assignment.requisition_item.requisition.requisition_number}."
+                ),
+            })
+
+    # Inventory staff: requisitions ready for issuance
+    if role == "inventory_staff":
+        ready_requisitions = Requisition.objects.filter(
+            status__in=[
+                Requisition.Status.APPROVED,
+                Requisition.Status.PARTIALLY_FULFILLED,
+            ]
+        ).order_by("-created_at")
+
+        notification_count += ready_requisitions.count()
+
+        for requisition in ready_requisitions[:5]:
+            notifications.append({
+                "title": "Requisition Ready for Issuance",
+                "message": (
+                    f"Requisition "
+                    f"{requisition.requisition_number} "
+                    f"has approved items awaiting fulfilment."
                 ),
             })
 

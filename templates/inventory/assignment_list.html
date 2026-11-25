@@ -1,0 +1,131 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h2 class="mb-1">Item Assignments</h2>
+        <p class="text-muted mb-0">
+            Review items issued to employees and their acknowledgement status.
+        </p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            {% if assignments %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Requisition</th>
+                                <th>Item</th>
+                                <th>Assigned To</th>
+                                <th>Quantity</th>
+                                <th>Asset Tag</th>
+                                <th>Issued Date</th>
+                                <th>Acknowledgement</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for assignment in assignments %}
+                                <tr>
+                                    <td>
+                                        {{ assignment.requisition_item.requisition.requisition_number }}
+                                    </td>
+
+                                    <td>
+                                        {{ assignment.inventory_item.name }}
+                                    </td>
+
+                                    <td>
+                                        {{ assignment.assigned_to.get_full_name|default:assignment.assigned_to.username }}
+                                    </td>
+
+                                    <td>
+                                        {{ assignment.quantity|floatformat:2 }}
+                                    </td>
+
+                                    <td>
+                                        {% if assignment.asset %}
+                                            <a href="{% url 'inventory-asset-detail' assignment.asset.pk %}">
+                                                {{ assignment.asset.asset_tag }}
+                                            </a>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {{ assignment.issued_at|date:"M d, Y" }}
+                                    </td>
+
+                                    <td>
+                                        {% if assignment.status == "acknowledged" %}
+                                            <span class="badge bg-success">
+                                                Acknowledged
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">
+                                                Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if is_paginated %}
+                    <nav aria-label="Assignment pages">
+                        <ul class="pagination justify-content-end mb-0">
+
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a
+                                        class="page-link"
+                                        href="?page={{ page_obj.previous_page_number }}"
+                                    >
+                                        Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item disabled">
+                                <span class="page-link">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a
+                                        class="page-link"
+                                        href="?page={{ page_obj.next_page_number }}"
+                                    >
+                                        Next
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                        </ul>
+                    </nav>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center py-5">
+                    <h5>No item assignments yet</h5>
+                    <p class="text-muted mb-0">
+                        Issued items will appear here.
+                    </p>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

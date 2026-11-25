@@ -11,10 +11,22 @@ from .views import (
     PendingInventoryRegistrationView,
     InventoryRegistrationCreateView,
     InventoryRegistrationHistoryView,
+    AssetListView,
+    AssetDetailView,
+    AssignmentListView,
+    MyItemsView,
+    acknowledge_assignment,
 )
 
+from .issuance_views import fulfil_requisitions
+
+
 urlpatterns = [
-    path("", InventoryItemListView.as_view(), name="inventory-item-list"),
+    path(
+        "",
+        InventoryItemListView.as_view(),
+        name="inventory-item-list",
+    ),
 
     path(
         "items/new/",
@@ -57,5 +69,38 @@ urlpatterns = [
         "registrations/history/",
         InventoryRegistrationHistoryView.as_view(),
         name="inventory-registration-history",
+    ),
+
+    path(
+        "assets/",
+        AssetListView.as_view(),
+        name="inventory-asset-list",
+    ),
+    path(
+        "assets/<int:pk>/",
+        AssetDetailView.as_view(),
+        name="inventory-asset-detail",
+    ),
+
+    path(
+        "assignments/",
+        AssignmentListView.as_view(),
+        name="inventory-assignment-list",
+    ),
+    path(
+        "my-items/",
+        MyItemsView.as_view(),
+        name="inventory-my-items",
+    ),
+    path(
+        "assignments/<int:pk>/acknowledge/",
+        acknowledge_assignment,
+        name="inventory-acknowledge-assignment",
+    ),
+
+    path(
+        "fulfil-requisitions/",
+        fulfil_requisitions,
+        name="inventory-fulfil-requisitions",
     ),
 ]

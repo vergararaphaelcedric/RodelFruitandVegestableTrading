@@ -1,0 +1,158 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Asset Details</h2>
+            <p class="text-muted mb-0">
+                View asset information and assignment history.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'inventory-asset-list' %}"
+            class="btn btn-outline-secondary"
+        >
+            Back to Assets
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Asset Information</h5>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-4">
+
+                <div class="col-md-6">
+                    <label class="text-muted small">Asset Tag</label>
+                    <div class="fw-semibold">{{ asset.asset_tag }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="text-muted small">Serial Number</label>
+                    <div class="fw-semibold">
+                        {{ asset.serial_number|default:"Not provided" }}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="text-muted small">Inventory Item</label>
+                    <div class="fw-semibold">
+                        {{ asset.inventory_item.name }}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="text-muted small">Item Code</label>
+                    <div class="fw-semibold">
+                        {{ asset.inventory_item.item_code }}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="text-muted small">Status</label>
+                    <div>
+                        {% if asset.status == "available" %}
+                            <span class="badge bg-success">Available</span>
+                        {% elif asset.status == "assigned" %}
+                            <span class="badge bg-primary">Assigned</span>
+                        {% elif asset.status == "retired" %}
+                            <span class="badge bg-secondary">Retired</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">
+                                {{ asset.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="text-muted small">Created</label>
+                    <div class="fw-semibold">
+                        {{ asset.created_at|date:"M d, Y g:i A" }}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% if asset.assignment %}
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Current Assignment</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-4">
+
+                    <div class="col-md-6">
+                        <label class="text-muted small">Assigned To</label>
+                        <div class="fw-semibold">
+                            {{ asset.assignment.assigned_to.get_full_name|default:asset.assignment.assigned_to.username }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="text-muted small">Requisition</label>
+                        <div class="fw-semibold">
+                            {{ asset.assignment.requisition_item.requisition.requisition_number }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="text-muted small">Issued By</label>
+                        <div class="fw-semibold">
+                            {{ asset.assignment.issued_by.get_full_name|default:asset.assignment.issued_by.username }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="text-muted small">Issued At</label>
+                        <div class="fw-semibold">
+                            {{ asset.assignment.issued_at|date:"M d, Y g:i A" }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="text-muted small">Acknowledgement</label>
+                        <div>
+                            {% if asset.assignment.status == "acknowledged" %}
+                                <span class="badge bg-success">
+                                    Acknowledged
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">
+                                    Pending Acknowledgement
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if asset.assignment.acknowledgement_note %}
+                        <div class="col-12">
+                            <label class="text-muted small">
+                                Acknowledgement Note
+                            </label>
+                            <div>
+                                {{ asset.assignment.acknowledgement_note }}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            This asset does not currently have an assignment.
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,262 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Fulfil Requisitions</h2>
+            <p class="text-muted mb-0">
+                Issue approved items to employees and record item serial numbers.
+            </p>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if requisitions %}
+        {% for requisition in requisitions %}
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">
+                            {{ requisition.requisition_number }}
+                        </h5>
+
+                        <small class="text-muted">
+                            Requested by:
+                            {{ requisition.requested_by.get_full_name|default:requisition.requested_by.username }}
+                        </small>
+                    </div>
+
+                    <span class="badge bg-primary">
+                        {{ requisition.get_status_display }}
+                    </span>
+                </div>
+
+                <div class="card-body">
+
+                    <p class="mb-3">
+                        <strong>Department:</strong>
+                        {{ requisition.department }}
+                    </p>
+
+                    <p class="mb-3">
+                        <strong>Purpose:</strong>
+                        {{ requisition.purpose }}
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Requested Item</th>
+                                    <th>Inventory Item</th>
+                                    <th>Requested</th>
+                                    <th>Issued</th>
+                                    <th>Outstanding</th>
+                                    <th style="min-width: 340px;">
+                                        Issue Item
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for line in requisition.items.all %}
+                                    <tr>
+
+                                        <td>
+                                            <strong>
+                                                {{ line.item_description }}
+                                            </strong>
+
+                                            <div class="small text-muted">
+                                                Unit: {{ line.unit_of_measure }}
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            {% if line.inventory_item %}
+                                                {{ line.inventory_item.name }}
+                                            {% else %}
+                                                <span class="text-warning">
+                                                    Not linked to inventory
+                                                </span>
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            {{ line.quantity_requested|floatformat:2 }}
+                                        </td>
+
+                                        <td>
+                                            {{ line.quantity_fulfilled|floatformat:2 }}
+                                        </td>
+
+                                        <td>
+                                            <strong>
+                                                {{ line.quantity_outstanding|floatformat:2 }}
+                                            </strong>
+                                        </td>
+
+                                        <td>
+                                            {% if line.quantity_outstanding > 0 %}
+
+                                                <form method="post"
+                                                      action="{% url 'inventory-fulfil-requisitions' %}"
+                                                      class="issue-form"
+                                                      data-issue-form>
+
+                                                    {% csrf_token %}
+
+                                                    <input type="hidden"
+                                                           name="requisition_item_id"
+                                                           value="{{ line.pk }}">
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label">
+                                                            Inventory Item
+                                                        </label>
+
+                                                        <select name="inventory_item_id"
+                                                                class="form-select"
+                                                                data-inventory-select
+                                                                required>
+
+                                                            <option value="">
+                                                                Select inventory item
+                                                            </option>
+
+                                                            {% for item in inventory_items %}
+                                                                <option value="{{ item.pk }}"
+                                                                        data-available="{{ item.quantity_available }}"
+                                                                        {% if line.inventory_item_id == item.pk %}
+                                                                            selected
+                                                                        {% endif %}>
+
+                                                                    {{ item.name }}
+
+                                                                    {% if item.item_code %}
+                                                                        ({{ item.item_code }})
+                                                                    {% endif %}
+
+                                                                </option>
+                                                            {% endfor %}
+
+                                                        </select>
+
+                                                        <div data-stock-message
+                                                             class="small text-muted mt-1">
+                                                            Select an inventory item to check available stock.
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label">
+                                                            Quantity to Issue
+                                                        </label>
+
+                                                        <input type="number"
+                                                               name="quantity"
+                                                               class="form-control"
+                                                               min="0.01"
+                                                               max="{{ line.quantity_outstanding }}"
+                                                               step="0.01"
+                                                               data-issue-quantity
+                                                               required>
+
+                                                        <small class="text-muted">
+                                                            Maximum requested outstanding quantity:
+                                                            {{ line.quantity_outstanding|floatformat:2 }}
+                                                        </small>
+                                                    </div>
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label">
+                                                            Serial Number(s)
+                                                        </label>
+
+                                                        <textarea name="serial_numbers"
+                                                                  class="form-control"
+                                                                  rows="2"
+                                                                  placeholder="For durable equipment, enter one serial number per unit"></textarea>
+
+                                                        <small class="text-muted">
+                                                            Leave blank for consumable items.
+                                                        </small>
+                                                    </div>
+
+                                                    <button type="submit"
+                                                            class="btn btn-primary btn-sm"
+                                                            data-issue-submit
+                                                            disabled>
+                                                        Issue Item
+                                                    </button>
+
+                                                </form>
+
+                                            {% else %}
+
+                                                <span class="badge bg-success">
+                                                    Issued
+                                                </span>
+
+                                                <div class="small text-muted mt-1">
+                                                    Awaiting employee acknowledgement
+                                                    if not yet confirmed.
+                                                </div>
+
+                                            {% endif %}
+                                        </td>
+
+                                    </tr>
+
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6"
+                                            class="text-center text-muted">
+                                            This requisition has no items.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        {% endfor %}
+
+    {% else %}
+
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <h5>No approved requisitions available</h5>
+
+                <p class="text-muted mb-0">
+                    Approved requisitions will appear here when they are ready for issuance.
+                </p>
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+<script src="{% static 'js/issue_form.js' %}"></script>
+{% endblock %}

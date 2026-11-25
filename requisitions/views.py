@@ -8,6 +8,7 @@ from django.views import View
 
 from accounts.models import User
 from accounts.views import RoleRequiredMixin
+from inventory.models import ItemAssignment
 
 from .forms import (
     RequisitionDecisionForm,
@@ -252,8 +253,13 @@ class RequisitionDetailView(RoleRequiredMixin, View):
 
     def get(self, request, pk, *args, **kwargs):
         requisition = get_object_or_404(
-            Requisition.objects.filter(requested_by=request.user)
-            .select_related("requested_by", "department")
+            Requisition.objects.filter(
+                requested_by=request.user
+            )
+            .select_related(
+                "requested_by",
+                "department",
+            )
             .prefetch_related(
                 "items",
                 "items__inventory_item",
@@ -264,12 +270,27 @@ class RequisitionDetailView(RoleRequiredMixin, View):
             pk=pk,
         )
 
+        assignments = (
+            ItemAssignment.objects.filter(
+                requisition_item__requisition=requisition
+            )
+            .select_related(
+                "requisition_item",
+                "inventory_item",
+                "assigned_to",
+                "issued_by",
+                "asset",
+            )
+            .order_by("issued_at", "id")
+        )
+
         return render(
             request,
             self.template_name,
             {
                 "requisition": requisition,
                 "items": requisition.items.all(),
+                "assignments": assignments,
                 "status_history": requisition.status_history.all(),
                 "approval_history": requisition.approval_history.all(),
                 "page_title": "Requisition Details",
@@ -283,9 +304,14 @@ class RequisitionTrackingView(RoleRequiredMixin, View):
 
     def get(self, request, pk, *args, **kwargs):
         requisition = get_object_or_404(
-            Requisition.objects.filter(requested_by=request.user)
+            Requisition.objects.filter(
+                requested_by=request.user
+            )
             .select_related("department")
-            .prefetch_related("status_history", "approval_history"),
+            .prefetch_related(
+                "status_history",
+                "approval_history",
+            ),
             pk=pk,
         )
 
